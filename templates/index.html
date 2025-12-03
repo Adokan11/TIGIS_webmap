@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!--meta charset = 'utf-8'-->
     <title>Webmap Dev</title>
-    <link rel = 'stylesheet' href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
     <style>
         body {margin:0; font-family: Arial, sans-serif}
         #map {height: 100vh}
@@ -13,27 +12,53 @@
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.4); max-height: 80vh; overflow-y: auto
         }
         label {display: block; margin: 8px 0; font-weight: bold}
+        
+        .site-details {
+            position: absolute; bottom: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.4); max-width: 350px;
+            display: none;
+        }
+        .site-details.active {display: block}
+        .site-details h3 {margin-top: 0; color: #882255}
+        .site-details .close-btn {
+            float: right; cursor: pointer; font-size: 20px;
+            color: #666; font-weight: bold;
+        }
+        .site-details .close-btn:hover {color: #000}
+        .detail-section {margin: 10px 0; padding: 8px; background: #f5f5f5; border-radius: 4px}
+        .detail-section h4 {margin: 0 0 8px 0; color: #333; font-size: 14px}
+        .detail-row {display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px}
+        .detail-label {font-weight: bold; color: #555}
+        .detail-value {color: #333}
     </style>
 </head>
 <body>
 
-<!-- Layer control panel (populated by Flask template) -->
-<div class = 'controls'>
+<!-- Layer control panel -->
+<div class='controls'>
     <h3>Layers</h3>
     {% for layer in layers %}
     <label>
-        <input type = 'checkbox' checked onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
+        <input type='checkbox' checked onclick='toggle("{{ layer }}")' data-layer='{{ layer }}'>
         <span class="layer-label" data-layer="{{ layer }}">{{ layer.replace('_', ' ') | title }}</span>
     </label>
     {% endfor %}
     <h3>Search Sites</h3>
     <input type="text" id="site-search" placeholder="Search by title">
     <button onclick="searchSites()">Search</button>
+    <button onclick="clearSelection()" style="margin-top: 10px; width: 100%">Clear Selection</button>
 </div>
 
-<div id = 'map'></div>
+<!-- Site details panel -->
+<div class="site-details" id="site-details">
+    <span class="close-btn" onclick="clearSelection()">&times;</span>
+    <div id="details-content"></div>
+</div>
 
-<script src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+<div id='map'></div>
+
+<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
 <script>
 
     // Define all layer styles and labels in one place
@@ -83,62 +108,227 @@
 
     // Sites-specific filter term
     let sitesFilter = ''
+    
+    // Track selected site
+    let selectedSite = null
+    let selectedSiteLayer = null
+    let highlightedLayers = {}
 
     /**
-     * Generate HTML popup content based on layer type
-     * @param {Object} properties - Feature properties from GeoJSON
-     * @param {string} layerName - Name of the layer
-     * @returns {string} HTML string for popup content
+     * Handle site selection
      */
-    function infoPopup(properties, layerName) {
-        if (layerName === 'buffers') {
-            return `
-                <h3>Buffer of: ${properties.ENT_TITLE}</h3>
-                <b>Population in buffer:</b> ${Math.round(properties.Population).toLocaleString()}<br>
-                <b>Avg Income:</b> ${Math.round(properties.avg_income).toLocaleString()}<br>
-                <b>Avg Employment:</b> ${Math.round(properties.avg_employ).toLocaleString()}<br>
-                <b>Health Score:</b> ${Math.round(properties.avg_health).toLocaleString()}<br>
-                <b>Access Score:</b> ${Math.round(properties.avg_access).toLocaleString()}<br>
-            `
-                //<br><b>Designated:</b> ${properties.DESIGNATED}<br>
-                //<b>Ref:</b> ${properties.DES_REF} <small>(cat: ${properties.CATEGORY})</small><br>
-                //<a href='${properties.LINK}' target='_blank'>https://portal.historicenvironment.scot/</a>
-        } else if (layerName === 'spaces'){
-            return `
-                <h3>${properties.NAME}</h3>
-                <b>Category:</b> ${properties.PAN65}<br>
-                ${properties.CLASSIFICA ? `<b>Classification:</b> ${properties.CLASSIFICA}<br>` : ''}
-                <b>NP Name:</b> ${properties.NP_Name}<br>
-                ${properties.YEAROPEN > 1000 ? `<b>Year Opened:</b> ${parseInt(properties.YEAROPEN, 10)}<br>` : ''}
-                <b>Area:</b> ${properties.Area_ha.toLocaleString()} hectares <br>
-            `
-        } else if (layerName === 'sites') {
-            return `
-                <h3>${properties.ENT_TITLE}</h3>
-                <b>Designated:</b> ${properties.DESIGNATED}<br>
-                <b>Ref:</b> ${properties.DES_REF}<br>
-                <a href='${properties.LINK}' target='_blank'>https://portal.historicenvironment.scot/</a>
-            `
-        } else if (layerName === 'ccs') {
-            return `
-                <h3>${properties.CENTRE_NAME}</h3>
-                <b>Address:</b> ${properties.ADDRESS}<br>
-                ${properties.LISTED ? `<b>Listed:</b> ${properties.LISTED}<br>` : ''}
-                ${properties.LINK ? `<a href=${properties.LINK} target='_blank'>Centre Website</a>` : ''}
-            `
-        } else {
-            // fallback for other layers
-            // just show everything! and try to make links work
-            let html = '<table>'
-            for (const [k, v] of Object.entries(properties)) {
-                if (v && typeof v === 'string' && v.startsWith('http')) {
-                    html += `<tr><th>${k}</th><td><a href='${v}' target='_blank'>Link</a></td></tr>`
-                } else {
-                    html += `<tr><th>${k}</th><td>${v}</td></tr>`
-                }
-            }
-            return html + '</table>'
+    function selectSite(desRef, feature, layer) {
+        // Clear previous selection
+        if (selectedSiteLayer) {
+            selectedSiteLayer.setStyle({
+                ...LAYER_CONFIG.sites,
+                fillOpacity: 0.7,
+                weight: 1
+            })
         }
+        
+        // Highlight selected site
+        layer.setStyle({
+            ...LAYER_CONFIG.sites,
+            fillOpacity: 1,
+            weight: 3,
+            color: '#ff0000'
+        })
+        
+        selectedSite = desRef
+        selectedSiteLayer = layer
+        
+        // Fetch site details
+        fetch(`/site_details/${desRef}`)
+            .then(r => r.json())
+            .then(data => {
+                displaySiteDetails(feature.properties, data)
+                highlightRelatedFeatures(data)
+            })
+            .catch(err => {
+                console.error('Error fetching site details:', err)
+                alert('Error loading site details')
+            })
+    }
+
+    /**
+     * Display site details in the panel
+     */
+    function displaySiteDetails(siteProps, details) {
+        const panel = document.getElementById('site-details')
+        const content = document.getElementById('details-content')
+        
+        let html = `<h3>${siteProps.ENT_TITLE}</h3>`
+        html += `<p><strong>Ref:</strong> ${siteProps.DES_REF}</p>`
+        
+        // Site Catchment
+        if (details.site_catchment) {
+            const sc = details.site_catchment
+            html += `<div class="detail-section">
+                <h4>📍 Catchment Area</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Population:</span>
+                    <span class="detail-value">${sc.POPULATION?.toLocaleString() || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Bus Routes:</span>
+                    <span class="detail-value">${sc.NUM_BUS_ROUTES || 0}</span>
+                </div>
+            </div>`
+        }
+        
+        // SIMD Score
+        if (details.simd_score) {
+            const simd = details.simd_score
+            html += `<div class="detail-section">
+                <h4>📊 SIMD Scores</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Income:</span>
+                    <span class="detail-value">${Math.round(simd.AVG_INCOME || 0).toLocaleString()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Employment:</span>
+                    <span class="detail-value">${Math.round(simd.AVG_EMPLOY || 0).toLocaleString()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Health:</span>
+                    <span class="detail-value">${Math.round(simd.AVG_HEALTH || 0).toLocaleString()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Access:</span>
+                    <span class="detail-value">${Math.round(simd.AVG_ACCESS || 0).toLocaleString()}</span>
+                </div>
+            </div>`
+        }
+        
+        // Nearest Open Space
+        if (details.open_spaces) {
+            const os = details.open_spaces
+            html += `<div class="detail-section">
+                <h4>🌳 Nearest Green Space</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">${os.NAME || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span class="detail-value">${os.TYPE || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Area:</span>
+                    <span class="detail-value">${os.AREA_HA?.toFixed(2) || 'N/A'} ha</span>
+                </div>
+            </div>`
+        }
+        
+        // Nearest Community Centre
+        if (details.community_centres) {
+            const cc = details.community_centres
+            html += `<div class="detail-section">
+                <h4>🏢 Nearest Community Centre</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">${cc.CENTRE_NAME || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Address:</span>
+                    <span class="detail-value" style="max-width: 200px">${cc.ADDRESS || 'N/A'}</span>
+                </div>
+                ${cc.LINK ? `<div class="detail-row"><a href="${cc.LINK}" target="_blank">Visit Website</a></div>` : ''}
+            </div>`
+        }
+        
+        content.innerHTML = html
+        panel.classList.add('active')
+    }
+
+    /**
+     * Highlight related features (buffer, green space, community centre)
+     */
+    function highlightRelatedFeatures(details) {
+        // Clear previous highlights
+        Object.values(highlightedLayers).forEach(layer => {
+            if (layer) map.removeLayer(layer)
+        })
+        highlightedLayers = {}
+        
+        // Find and highlight the corresponding buffer
+        if (details.site_catchment && layersData.buffers) {
+            const bufferFeature = layersData.buffers.features.find(
+                f => f.properties.DES_REF === details.site_catchment.DES_REF
+            )
+            if (bufferFeature) {
+                highlightedLayers.buffer = L.geoJSON(bufferFeature, {
+                    style: {
+                        color: '#332288',
+                        weight: 3,
+                        fillOpacity: 0.3
+                    }
+                }).addTo(map)
+            }
+        }
+        
+        // Find and highlight the corresponding green space
+        if (details.open_spaces && layersData.spaces) {
+            const spaceFeature = layersData.spaces.features.find(
+                f => f.properties.OS_ID === details.open_spaces.OS_ID
+            )
+            if (spaceFeature) {
+                highlightedLayers.space = L.geoJSON(spaceFeature, {
+                    style: {
+                        color: '#117733',
+                        weight: 3,
+                        fillOpacity: 0.3
+                    }
+                }).addTo(map)
+            }
+        }
+        
+        // Find and highlight the corresponding community centre
+        if (details.community_centres && layersData.ccs) {
+            const ccFeature = layersData.ccs.features.find(
+                f => f.properties.CENTRE_ID === details.community_centres.CENTRE_ID
+            )
+            if (ccFeature) {
+                highlightedLayers.cc = L.geoJSON(ccFeature, {
+                    pointToLayer: (feature, latlng) => {
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            color: '#999933',
+                            fillColor: '#999933',
+                            weight: 3,
+                            fillOpacity: 0.9
+                        })
+                    }
+                }).addTo(map)
+            }
+        }
+    }
+
+    /**
+     * Clear site selection
+     */
+    function clearSelection() {
+        // Reset selected site marker
+        if (selectedSiteLayer) {
+            selectedSiteLayer.setStyle({
+                ...LAYER_CONFIG.sites,
+                fillOpacity: 0.7,
+                weight: 1
+            })
+        }
+        
+        // Remove highlighted layers
+        Object.values(highlightedLayers).forEach(layer => {
+            if (layer) map.removeLayer(layer)
+        })
+        highlightedLayers = {}
+        
+        // Hide details panel
+        document.getElementById('site-details').classList.remove('active')
+        
+        selectedSite = null
+        selectedSiteLayer = null
     }
 
     /**
@@ -161,13 +351,9 @@
         // Get style from config
         const style = LAYER_CONFIG[name] || {color: '#3388ff'}
         
-        // Create GeoJSON layer with styling and popups
+        // Create GeoJSON layer with styling
         const layer = L.geoJSON(data, {
-            
-            // fetch style
             style: style,
-
-            // Use circle markers for point layers
             pointToLayer: (feature, latlng) => {
                 if (name === 'sites' || name === 'ccs') {
                     return L.circleMarker(latlng, {
@@ -177,35 +363,79 @@
                 }
                 return L.marker(latlng)
             },
-            
             onEachFeature: (feature, layer) => {
-
-                // Generate popup content
-                const popupContent = infoPopup(feature.properties, name)
-
-                // Bind popup to feature
-                layer.bindPopup(popupContent, {
-                    className: `custom-popup-${name}`,
-                })
-
-                // Add colored border when popup opens
-                layer.on('popupopen', (e) => {
-                    const el = e.popup.getElement()
-                    if (el) {
-                        el.style.border = `4px solid ${style.color}`
-                        el.style.borderRadius = '15px'}
-                });
-
+                // For sites, add click handler for selection
+                if (name === 'sites') {
+                    layer.on('click', () => {
+                        selectSite(feature.properties.DES_REF, feature, layer)
+                    })
+                    
+                    // Add hover effect
+                    layer.on('mouseover', function() {
+                        if (selectedSiteLayer !== this) {
+                            this.setStyle({fillOpacity: 0.9})
+                        }
+                    })
+                    layer.on('mouseout', function() {
+                        if (selectedSiteLayer !== this) {
+                            this.setStyle({fillOpacity: 0.7})
+                        }
+                    })
+                } else {
+                    // For other layers, keep popup behavior
+                    const popupContent = infoPopup(feature.properties, name)
+                    layer.bindPopup(popupContent, {
+                        className: `custom-popup-${name}`,
+                    })
+                    layer.on('popupopen', (e) => {
+                        const el = e.popup.getElement()
+                        if (el) {
+                            el.style.border = `4px solid ${style.color}`
+                            el.style.borderRadius = '15px'
+                        }
+                    })
+                }
             }
         }).addTo(map)
 
-        // Store reference to active layer
         activeLayers[name] = layer
     }
 
     /**
+     * Generate HTML popup content for non-site layers
+     */
+    function infoPopup(properties, layerName) {
+        if (layerName === 'buffers') {
+            return `
+                <h3>Buffer of: ${properties.ENT_TITLE}</h3>
+                <b>Population in buffer:</b> ${Math.round(properties.Population).toLocaleString()}<br>
+                <b>Avg Income:</b> ${Math.round(properties.avg_income).toLocaleString()}<br>
+                <b>Avg Employment:</b> ${Math.round(properties.avg_employ).toLocaleString()}<br>
+                <b>Health Score:</b> ${Math.round(properties.avg_health).toLocaleString()}<br>
+                <b>Access Score:</b> ${Math.round(properties.avg_access).toLocaleString()}<br>
+            `
+        } else if (layerName === 'spaces'){
+            return `
+                <h3>${properties.NAME}</h3>
+                <b>Category:</b> ${properties.PAN65}<br>
+                ${properties.CLASSIFICA ? `<b>Classification:</b> ${properties.CLASSIFICA}<br>` : ''}
+                <b>NP Name:</b> ${properties.NP_Name}<br>
+                ${properties.YEAROPEN > 1000 ? `<b>Year Opened:</b> ${parseInt(properties.YEAROPEN, 10)}<br>` : ''}
+                <b>Area:</b> ${properties.Area_ha.toLocaleString()} hectares <br>
+            `
+        } else if (layerName === 'ccs') {
+            return `
+                <h3>${properties.CENTRE_NAME}</h3>
+                <b>Address:</b> ${properties.ADDRESS}<br>
+                ${properties.LISTED ? `<b>Listed:</b> ${properties.LISTED}<br>` : ''}
+                ${properties.LINK ? `<a href=${properties.LINK} target='_blank'>Centre Website</a>` : ''}
+            `
+        }
+        return '<p>No details available</p>'
+    }
+
+    /**
      * Toggle layer visibility on the map
-     * @param {string} name - Layer name to toggle
      */
     function toggle(name) {
         if (activeLayers[name]) {
@@ -226,11 +456,10 @@
     }
 
     /**
-     * Handle sites search: update filter and refresh layer (show if not active)
+     * Handle sites search
      */
     function searchSites() {
         sitesFilter = document.getElementById('site-search').value
-
         const sitesCheckbox = document.querySelector('input[data-layer="sites"]')
         
         if (activeLayers['sites']) {
@@ -238,12 +467,10 @@
             delete activeLayers['sites']
         }
 
-        // Create/show the (filtered) layer if data is loaded
         if (layersData['sites']) {
             createLayer('sites')
             sitesCheckbox.checked = true
         } else {
-            // If data not loaded yet, load it and apply filter
             fetch('/layer/sites')
             .then(r => r.json())
             .then(data => {
@@ -268,14 +495,9 @@
         const config = LAYER_CONFIG[layerName]
         
         if (config) {
-            // Set custom label text
             label.textContent = config.label
-            
-            // Set text color
             label.style.color = config.color
             label.style.fontWeight = 'bold'
-
-            // Set default checked state
             const checkbox = label.previousElementSibling
             checkbox.checked = config.defaultOn || false
         }

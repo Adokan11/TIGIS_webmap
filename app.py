@@ -11,6 +11,7 @@ app = flask.Flask(__name__)
 
 DATA_DIR = pathlib.Path('data')
 
+# load every geo file up front
 datasets = {
     'buffers': gpd.read_file(DATA_DIR / 'Buffers.geojson'),
     'spaces' : gpd.read_file(DATA_DIR / 'Open_Spaces.geojson'),
@@ -41,6 +42,16 @@ def get_layer(layer_name):
 
     # Return GeoDataFrame as GeoJSON
     return flask.Response(layer_gdf.to_json(), mimetype = 'application/geo+json')
+
+@app.route('/site_details/<des_ref>')
+def get_site_details(des_ref):
+    details = db.get_site_details(des_ref)
+    return details
+
+#example
+get_site_details('LB47863')
+#for i in datasets['sites']['DES_REF']:
+#    get_site_details(i)
 
 @app.route('/')
 def index():
