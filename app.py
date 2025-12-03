@@ -1,14 +1,22 @@
 import flask
 import geopandas as gpd
 import pathlib
+import dotenv
+from db import get_connection
+
+dotenv.load_dotenv()  # only in development
+
+conn = get_connection()
+cursor = conn.cursor()
+cursor.execute('select * from s1511340.sites')
 
 app = flask.Flask(__name__)
 
 DATA_DIR = pathlib.Path('data')
 
 datasets = {
-    'buffers': gpd.read_file(DATA_DIR / 'buffers.geojson'),
-    'spaces' : gpd.read_file(DATA_DIR / 'Open_spaces.geojson')}
+    'buffers': gpd.read_file(DATA_DIR / 'Buffers.geojson'),
+    'spaces' : gpd.read_file(DATA_DIR / 'Open_Spaces.geojson')}
 
 # Process each dataset
 for name, gdf in datasets.items():
