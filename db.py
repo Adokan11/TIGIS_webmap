@@ -1,5 +1,8 @@
 import os
 import oracledb
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
 
 def get_connection():
 
@@ -21,3 +24,21 @@ def get_connection():
         port = ORACLE_PORT,
         service_name = ORACLE_SERVICE,
     )
+
+def sql_to_gdf(name):
+
+    cursor = get_connection().cursor()
+
+    # Load sites from Oracle database
+    cursor.execute(f'select * from s1511340.{name}')
+    rows = cursor.fetchall()
+
+    # Get column names from cursor description
+    columns = [desc[0] for desc in cursor.description]
+
+    #create gdf
+    df = pd.DataFrame(rows, columns = columns)
+    geometry = [Point(xy) for xy in zip(df['XCOORD'], df['YCOORD'])]
+    gdf = gpd.GeoDataFrame(df, geometry = geometry, crs = 'EPSG:27700')
+    
+    return gdf

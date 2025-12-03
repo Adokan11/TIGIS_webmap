@@ -76,10 +76,17 @@
             `
         } else if (layerName === 'sites') {
             return `
-                <h3>${properties[Object.keys(properties)[1]]}</h3>
+                <h3>${properties.ENT_TITLE}</h3>
                 <b>Designated:</b> ${properties.DESIGNATED}<br>
                 <b>Ref:</b> ${properties.DES_REF}<br>
                 <a href='${properties.LINK}' target='_blank'>https://portal.historicenvironment.scot/</a>
+            `
+        } else if (layerName === 'ccs') {
+            return `
+                <h3>${properties.CENTRE_NAME}</h3>
+                <b>Address:</b> ${properties.ADDRESS}<br>
+                ${properties.LISTED ? `<b>Listed:</b> ${properties.LISTED}<br>` : ''}
+                ${properties.LINK ? `<a href=${properties.LINK} target='_blank'>Centre Website</a>` : ''}
             `
         } else {
             // fallback for other layers
@@ -114,6 +121,7 @@
                     buffers: {color: '#332288', weight: 2, fillOpacity: 0.15 },
                     spaces: {color: '#117733', weight: 2, fillOpacity: 0.15 },
                     sites: {color: '#882255', radius: 5, fillOpacity: 0.7 },
+                    ccs: {color: '#999933', radius: 5, fillOpacity: 0.7 },
                     other: {color: '#3388ff'}}
                 
                 // Create GeoJSON layer with styling and popups
@@ -124,7 +132,7 @@
 
                     // Use circle markers for point layers
                     pointToLayer: (feature, latlng) => {
-                        if (name === 'sites') {
+                        if (name === 'sites' || name === 'ccs') {
                             return L.circleMarker(latlng, {
                                 ...styles[name],
                                 pane: 'sitesPane'
