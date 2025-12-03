@@ -1,14 +1,14 @@
 import flask
+import pandas as pd
 import geopandas as gpd
 import pathlib
 import dotenv
-from db import get_connection
+from shapely.geometry import Point
+import db
 
 dotenv.load_dotenv()  # only in development
 
-conn = get_connection()
-cursor = conn.cursor()
-cursor.execute('select * from s1511340.sites')
+cursor = db.get_connection().cursor()
 
 app = flask.Flask(__name__)
 
@@ -18,19 +18,33 @@ datasets = {
     'buffers': gpd.read_file(DATA_DIR / 'Buffers.geojson'),
     'spaces' : gpd.read_file(DATA_DIR / 'Open_Spaces.geojson')}
 
+# Load sites from Oracle database
+cursor.execute('select * from s1511340.sites')
+rows = cursor.fetchall()
+
+# Get column names from cursor description
+columns = [desc[0] for desc in cursor.description]
+
+#create gdf
+df_sites = pd.DataFrame(rows, columns = columns)
+geometry = [Point(xy) for xy in zip(df_sites['XCOORD'], df_sites['YCOORD'])]
+gdf_sites = gpd.GeoDataFrame(df_sites, geometry = geometry, crs = 'EPSG:27700')
+
+# Add to datasets
+datasets['sites'] = gdf_sites
+
 # Process each dataset
 for name, gdf in datasets.items():
     gdf = gdf.to_crs(epsg = 4326)
 
     # Convert date columns to strings for JSON serialization
-    if name == 'buffers':
-        gdf['CREATED'] = gdf['CREATED'].dt.strftime('%Y-%m-%d')
-        gdf['UPDATED'] = gdf['UPDATED'].dt.strftime('%Y-%m-%d')
-        gdf['DESIGNATED'] = gdf['DESIGNATED'].dt.strftime('%Y-%m-%d')
-        gdf['AMENDED'] = gdf['AMENDED'].dt.strftime('%Y-%m-%d')
+    for col in gdf.columns:
+        if pd.api.types.is_datetime64_any_dtype(gdf[col]):
+            gdf[col] = gdf[col].dt.strftime('%Y-%m-%d')
 
     datasets[name] = gdf
-print(f'Loaded {len(datasets["buffers"])} buffer zones and {len(datasets["spaces"])} open spaces')
+print(f'Loaded {len(datasets["buffers"])} buffer zones, ' + str(len(datasets["spaces"])) +
+    f' open spaces, and {len(datasets["sites"])} sites')
 
 @app.route('/layer/<layer_name>')
 def get_layer(layer_name):

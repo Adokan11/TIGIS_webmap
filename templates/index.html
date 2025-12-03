@@ -38,7 +38,11 @@
     // Add OpenStreetMap base layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy OpenStreetMap contributors'}).addTo(map)
-
+    
+    // Create a custom pane for sites with higher z-index
+    map.createPane('sitesPane')
+    map.getPane('sitesPane').style.zIndex = 650
+    
     // Track currently active layers
     const activeLayers = {}
 
@@ -51,16 +55,16 @@
     function infoPopup(properties, layerName) {
         if (layerName === 'buffers') {
             return `
-                <h3>${properties.ENT_TITLE}</h3>
+                <h3>Buffer of: ${properties.ENT_TITLE}</h3>
                 <b>Population in buffer:</b> ${Math.round(properties.Population).toLocaleString()}<br>
                 <b>Avg Income:</b> ${Math.round(properties.avg_income).toLocaleString()}<br>
                 <b>Avg Employment:</b> ${Math.round(properties.avg_employ).toLocaleString()}<br>
                 <b>Health Score:</b> ${Math.round(properties.avg_health).toLocaleString()}<br>
-                <b>Access Score:</b> ${Math.round(properties.avg_access).toLocaleString()}<br><br>
-                <b>Designated:</b> ${properties.DESIGNATED}<br>
-                <b>Ref:</b> ${properties.DES_REF} <small>(cat: ${properties.CATEGORY})</small><br>
-                <a href='${properties.LINK}' target='_blank'>https://portal.historicenvironment.scot/</a>
+                <b>Access Score:</b> ${Math.round(properties.avg_access).toLocaleString()}<br>
             `
+                //<br><b>Designated:</b> ${properties.DESIGNATED}<br>
+                //<b>Ref:</b> ${properties.DES_REF} <small>(cat: ${properties.CATEGORY})</small><br>
+                //<a href='${properties.LINK}' target='_blank'>https://portal.historicenvironment.scot/</a>
         } else if (layerName === 'spaces'){
             return `
                 <h3>${properties.NAME}</h3>
@@ -69,6 +73,13 @@
                 <b>NP Name:</b> ${properties.NP_Name}<br>
                 ${properties.YEAROPEN > 1000 ? `<b>Year Opened:</b> ${parseInt(properties.YEAROPEN, 10)}<br>` : ''}
                 <b>Area:</b> ${properties.Area_ha.toLocaleString()} hectares <br>
+            `
+        } else if (layerName === 'sites') {
+            return `
+                <h3>${properties[Object.keys(properties)[1]]}</h3>
+                <b>Designated:</b> ${properties.DESIGNATED}<br>
+                <b>Ref:</b> ${properties.DES_REF}<br>
+                <a href='${properties.LINK}' target='_blank'>https://portal.historicenvironment.scot/</a>
             `
         } else {
             // fallback for other layers
@@ -102,6 +113,7 @@
                 const styles = {
                     buffers: {color: '#332288', weight: 2, fillOpacity: 0.15 },
                     spaces: {color: '#117733', weight: 2, fillOpacity: 0.15 },
+                    sites: {color: '#882255', radius: 5, fillOpacity: 0.7 },
                     other: {color: '#3388ff'}}
                 
                 // Create GeoJSON layer with styling and popups
@@ -109,6 +121,17 @@
                     
                     // fetch style
                     style: styles[name] || styles['other'],
+
+                    // Use circle markers for point layers
+                    pointToLayer: (feature, latlng) => {
+                        if (name === 'sites') {
+                            return L.circleMarker(latlng, {
+                                ...styles[name],
+                                pane: 'sitesPane'
+                            })
+                        }
+                        return L.marker(latlng)
+                    },
                     
                     onEachFeature: (feature, layer) => {
 
