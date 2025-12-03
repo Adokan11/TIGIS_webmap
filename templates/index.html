@@ -23,7 +23,7 @@
     {% for layer in layers %}
     <label>
         <input type = 'checkbox' checked onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
-        {{ layer.replace('_', ' ') | title }}
+        <span class="layer-label" data-layer="{{ layer }}">{{ layer.replace('_', ' ') | title }}</span>
     </label>
     {% endfor %}
 </div>
@@ -32,6 +32,35 @@
 
 <script src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
 <script>
+
+    // Define all layer styles and labels in one place
+    const LAYER_CONFIG = {
+        buffers: {
+            defaultOn: false,
+            label: 'Buffers',
+            color: '#332288',
+            weight: 2,
+            fillOpacity: 0.15},
+        spaces: {
+            defaultOn: false,
+            label: 'Green Spaces',
+            color: '#117733',
+            weight: 2,
+            fillOpacity: 0.15},
+        sites: {
+            defaultOn: true,
+            label: 'Sites',
+            color: '#882255',
+            radius: 5,
+            fillOpacity: 0.7},
+        ccs: {
+            defaultOn: true,
+            label: 'Community Centres',
+            color: '#999933',
+            radius: 5,
+            fillOpacity: 0.7}
+    }
+
     // Initialize the map centered on Edinburgh
     const map = L.map('map').setView([55.94, -3.24], 12)
 
@@ -116,25 +145,20 @@
             .then(r => r.json())
             .then(data => {
 
-                // style of all layers
-                const styles = {
-                    buffers: {color: '#332288', weight: 2, fillOpacity: 0.15 },
-                    spaces: {color: '#117733', weight: 2, fillOpacity: 0.15 },
-                    sites: {color: '#882255', radius: 5, fillOpacity: 0.7 },
-                    ccs: {color: '#999933', radius: 5, fillOpacity: 0.7 },
-                    other: {color: '#3388ff'}}
+                // Get style from config
+                const style = LAYER_CONFIG[name] || {color: '#3388ff'}
                 
                 // Create GeoJSON layer with styling and popups
                 const layer = L.geoJSON(data, {
                     
                     // fetch style
-                    style: styles[name] || styles['other'],
+                    style: style,
 
                     // Use circle markers for point layers
                     pointToLayer: (feature, latlng) => {
                         if (name === 'sites' || name === 'ccs') {
                             return L.circleMarker(latlng, {
-                                ...styles[name],
+                                ...style,
                                 pane: 'sitesPane'
                             })
                         }
@@ -155,7 +179,7 @@
                         layer.on('popupopen', (e) => {
                             const el = e.popup.getElement()
                             if (el) {
-                                el.style.border = `4px solid ${styles[name].color}`
+                                el.style.border = `4px solid ${style.color}`
                                 el.style.borderRadius = '15px'}
                         });
 
@@ -168,8 +192,32 @@
         }
     }
 
-    // Auto-load checked layers
-    document.querySelectorAll('input[checked]').forEach(cb => {toggle(cb.dataset.layer)})
+    // Auto-load layers that are defaultOn
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        const layerName = cb.dataset.layer
+        if (LAYER_CONFIG[layerName]?.defaultOn) {
+            toggle(layerName)
+        }
+    })
+
+    // Apply custom labels and colors from config
+    document.querySelectorAll('.layer-label').forEach(label => {
+        const layerName = label.dataset.layer
+        const config = LAYER_CONFIG[layerName]
+        
+        if (config) {
+            // Set custom label text
+            label.textContent = config.label
+            
+            // Set text color
+            label.style.color = config.color
+            label.style.fontWeight = 'bold'
+
+            // Set default checked state
+            const checkbox = label.previousElementSibling
+            checkbox.checked = config.defaultOn || false
+        }
+    })
 
 </script>
 </body>
