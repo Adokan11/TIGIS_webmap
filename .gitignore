@@ -2,3 +2,4 @@ test.py
 test.ipynb
 .env
 __pycache__
+.vscode

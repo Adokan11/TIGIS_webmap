@@ -37,10 +37,10 @@ def get_layer(layer_name):
     if layer_name not in datasets:
         return flask.jsonify({'error': 'Layer not found'}), 404
 
-    gdf = datasets[layer_name]
+    layer_gdf = datasets[layer_name]
 
     # Return GeoDataFrame as GeoJSON
-    return flask.Response(gdf.to_json(), mimetype = 'application/geo+json')
+    return flask.Response(layer_gdf.to_json(), mimetype = 'application/geo+json')
 
 @app.route('/')
 def index():

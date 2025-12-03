@@ -26,6 +26,9 @@
         <span class="layer-label" data-layer="{{ layer }}">{{ layer.replace('_', ' ') | title }}</span>
     </label>
     {% endfor %}
+    <h3>Search Sites</h3>
+    <input type="text" id="site-search" placeholder="Search by title">
+    <button onclick="searchSites()">Search</button>
 </div>
 
 <div id = 'map'></div>
@@ -74,6 +77,12 @@
     
     // Track currently active layers
     const activeLayers = {}
+
+    // Store full layer data (to avoid refetching)
+    const layersData = {}
+
+    // Sites-specific filter term
+    let sitesFilter = ''
 
     /**
      * Generate HTML popup content based on layer type
@@ -133,6 +142,68 @@
     }
 
     /**
+     * Create and add a layer to the map from stored data (applying filters if applicable)
+     * @param {string} name - Layer name
+     */
+    function createLayer(name) {
+        let data = layersData[name]
+
+        // Apply filter for sites layer if set
+        if (name === 'sites' && sitesFilter) {
+            data = {
+                type: 'FeatureCollection',
+                features: data.features.filter(f => 
+                    f.properties.ENT_TITLE.toLowerCase().includes(sitesFilter.toLowerCase())
+                )
+            }
+        }
+
+        // Get style from config
+        const style = LAYER_CONFIG[name] || {color: '#3388ff'}
+        
+        // Create GeoJSON layer with styling and popups
+        const layer = L.geoJSON(data, {
+            
+            // fetch style
+            style: style,
+
+            // Use circle markers for point layers
+            pointToLayer: (feature, latlng) => {
+                if (name === 'sites' || name === 'ccs') {
+                    return L.circleMarker(latlng, {
+                        ...style,
+                        pane: 'sitesPane'
+                    })
+                }
+                return L.marker(latlng)
+            },
+            
+            onEachFeature: (feature, layer) => {
+
+                // Generate popup content
+                const popupContent = infoPopup(feature.properties, name)
+
+                // Bind popup to feature
+                layer.bindPopup(popupContent, {
+                    className: `custom-popup-${name}`,
+                })
+
+                // Add colored border when popup opens
+                layer.on('popupopen', (e) => {
+                    const el = e.popup.getElement()
+                    if (el) {
+                        el.style.border = `4px solid ${style.color}`
+                        el.style.borderRadius = '15px'}
+                });
+
+            }
+        }).addTo(map)
+
+        // Store reference to active layer
+        activeLayers[name] = layer
+    }
+
+    /**
      * Toggle layer visibility on the map
      * @param {string} name - Layer name to toggle
      */
@@ -141,53 +212,44 @@
             map.removeLayer(activeLayers[name])
             delete activeLayers[name]
         } else {
-            fetch(`/layer/${name}`)
+            if (!layersData[name]) {
+                fetch(`/layer/${name}`)
+                .then(r => r.json())
+                .then(data => {
+                    layersData[name] = data
+                    createLayer(name)
+                })
+            } else {
+                createLayer(name)
+            }
+        }
+    }
+
+    /**
+     * Handle sites search: update filter and refresh layer (show if not active)
+     */
+    function searchSites() {
+        sitesFilter = document.getElementById('site-search').value
+
+        const sitesCheckbox = document.querySelector('input[data-layer="sites"]')
+        
+        if (activeLayers['sites']) {
+            map.removeLayer(activeLayers['sites'])
+            delete activeLayers['sites']
+        }
+
+        // Create/show the (filtered) layer if data is loaded
+        if (layersData['sites']) {
+            createLayer('sites')
+            sitesCheckbox.checked = true
+        } else {
+            // If data not loaded yet, load it and apply filter
+            fetch('/layer/sites')
             .then(r => r.json())
             .then(data => {
-
-                // Get style from config
-                const style = LAYER_CONFIG[name] || {color: '#3388ff'}
-                
-                // Create GeoJSON layer with styling and popups
-                const layer = L.geoJSON(data, {
-                    
-                    // fetch style
-                    style: style,
-
-                    // Use circle markers for point layers
-                    pointToLayer: (feature, latlng) => {
-                        if (name === 'sites' || name === 'ccs') {
-                            return L.circleMarker(latlng, {
-                                ...style,
-                                pane: 'sitesPane'
-                            })
-                        }
-                        return L.marker(latlng)
-                    },
-                    
-                    onEachFeature: (feature, layer) => {
-
-                        // Generate popup content
-                        const popupContent = infoPopup(feature.properties, name)
-
-                        // Bind popup to feature
-                        layer.bindPopup(popupContent, {
-                            className: `custom-popup-${name}`,
-                        })
-
-                        // Add colored border when popup opens
-                        layer.on('popupopen', (e) => {
-                            const el = e.popup.getElement()
-                            if (el) {
-                                el.style.border = `4px solid ${style.color}`
-                                el.style.borderRadius = '15px'}
-                        });
-
-                    }
-                }).addTo(map)
-
-                // Store reference to active layer
-                activeLayers[name] = layer
+                layersData['sites'] = data
+                createLayer('sites')
+                sitesCheckbox.checked = true
             })
         }
     }
