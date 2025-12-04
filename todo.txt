@@ -5,6 +5,7 @@
 (d) when hovering site name shows up
 
 line between site and its CC?
-pointer mouse on toggle boxes
-fix rapid toggle box issues
-make site toggle untoggable when a site is selected
+pointer mouse on toggle boxes @bug
+fix rapid toggle box issues @bug
+make site toggle untoggable when a site is selected @bug
+site selected cc unhlights off hover @bug

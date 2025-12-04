@@ -29,8 +29,8 @@ for name, gdf in datasets.items():
             gdf[col] = gdf[col].dt.strftime('%Y-%m-%d')
 
     datasets[name] = gdf
-print(f'Loaded {len(datasets["buffers"])} buffer zones, ' + str(len(datasets["spaces"])) +
-    f' open spaces, and {len(datasets["sites"])} sites')
+print(f'Loaded {len(datasets["sites"])} sites with {len(datasets["buffers"])} buffer zones, ' + 
+      str(len(datasets["spaces"])) + f' open spaces, and {len(datasets["ccs"])} community centres.')
 
 @app.route('/layer/<layer_name>')
 def get_layer(layer_name):
@@ -50,7 +50,8 @@ def get_site_details(des_ref):
 
 @app.route('/')
 def index():
-    return flask.render_template('index.html', layers = list(datasets.keys()))
+    layer_order = ['sites', 'buffers', 'spaces', 'ccs']
+    return flask.render_template('index.html', layers = layer_order)
 
 #debug
 #get_site_details('LB47863')

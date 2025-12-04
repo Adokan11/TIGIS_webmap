@@ -6,12 +6,37 @@
     <style>
         body {margin:0; font-family: Arial, sans-serif}
         #map {height: 100vh}
-        .controls {
-            position: absolute; top: 10px; right: 10px; z-index: 1000;
-            background: #f5f5f5; padding: 15px; border-radius: 8px;
-            box-shadow: 0 0 15px #00000040; max-height: 80vh; overflow-y: auto
-        }
         label {display: block; margin: 8px 0; font-weight: bold}
+        .controls button:hover {background: #661a40}
+        .controls {
+            position: absolute; top: 0; left: 0; bottom: 0; z-index: 1000;
+            background: #f5f5f5; padding: 15px; 
+            box-shadow: 0 0 15px #00000040; 
+            width: 250px; overflow-y: auto;
+        }
+        .controls button {
+            width: 100%; 
+            padding: 8px; 
+            background: #882255; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .leaflet-popup-close-button:hover {color: #ff0000 !important;}
+        .leaflet-popup-close-button {
+            font-size: 20px !important;
+            font-weight: bold !important;
+            color: #000 !important;
+            padding: 4px 8px !important;
+        }
+        #site-search {
+            width: 100%; 
+            padding: 8px; 
+            margin-bottom: 8px; 
+            box-sizing: border-box;
+        }
         .site-details{
             position: absolute; bottom: 10px; right: 10px; z-index: 1000;
             background: #f5f5f5; padding: 15px; border-radius: 8px;
@@ -30,15 +55,6 @@
         .detail-row {display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px}
         .detail-label {font-weight: bold; color: #555}
         .detail-value {color: #333}
-        .leaflet-popup-close-button {
-            font-size: 20px !important;
-            font-weight: bold !important;
-            color: #000 !important;
-            padding: 4px 8px !important;
-        }
-        .leaflet-popup-close-button:hover {
-            color: #ff0000 !important;
-        }
     </style>
 </head>
 <body>
@@ -72,14 +88,14 @@
     const LAYER_CONFIG = {
         buffers: {
             defaultOn: false,
-            label: 'Buffers',
+            label: 'All Buffers',
             color: '#332288',
             background: '#33228830',
             weight: 2,
             fillOpacity: 0.15},
         spaces: {
             defaultOn: false,
-            label: 'Green Spaces',
+            label: 'All Green Spaces',
             color: '#117733',
             background: '#11773330',
             weight: 2,
@@ -93,7 +109,7 @@
             fillOpacity: 0.5},
         ccs: {
             defaultOn: false,
-            label: 'Community Centres',
+            label: 'All Community Centres',
             color: '#999933',
             background: '#99993330',
             radius: 5,
@@ -102,6 +118,7 @@
 
     // Initialize the map centered on Edinburgh
     const map = L.map('map').setView([55.94, -3.24], 12)
+    map.zoomControl.setPosition('topright');
 
     // Add OpenStreetMap base layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -206,6 +223,14 @@
         // basic site info
         html += `<div class="detail-section" style = "border-color: ${LAYER_CONFIG.sites.color}; 
             color: ${LAYER_CONFIG.sites.color}; background: ${LAYER_CONFIG.sites.background}">
+            <div class="detail-row">
+                <span class="detail-label">Final Score:</span>
+                <span class="detail-value">${details.site_info.FINAL_SCORE?.toLocaleString() || 'N/A'}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Site Rank:</span>
+                <span class="detail-value">${details.site_info.RANK?.toLocaleString()}/65</span>
+            </div>
             <div class="detail-row">
                 <span class="detail-label">Designated:</span>
                 <span class="detail-value">${details.site_info.DESIGNATED || 'N/A'}</span>
@@ -430,31 +455,30 @@
     /**
      * Generate HTML popup content for non-site layers
      */
-    function infoPopup(properties, layerName) {
-        if (layerName === 'buffers') {
-            return `
+function infoPopup(properties, layerName) {
+        const popupTemplates = {
+            buffers: () => `
                 <h3>Buffer of: ${properties.ENT_TITLE}</h3>
                 <b>Population in buffer:</b> ${Math.round(properties.Population).toLocaleString()}<br>
                 <b>Number of bus routes in buffer:</b> ${Math.round(properties.No__of_Bus).toLocaleString()}<br>
-            `
-        } else if (layerName === 'spaces'){
-            return `
+            `,
+            spaces: () => `
                 <h3>${properties.NAME}</h3>
                 <b>Type:</b> ${properties.PAN65}<br>
                 ${properties.CLASSIFICA ? `<b>Classification:</b> ${properties.CLASSIFICA}<br>` : ''}
                 <b>NP Name:</b> ${properties.NP_Name}<br>
                 ${properties.YEAROPEN > 1000 ? `<b>Year Opened:</b> ${parseInt(properties.YEAROPEN, 10)}<br>` : ''}
                 <b>Area:</b> ${properties.Area_ha.toLocaleString()} hectares <br>
-            `
-        } else if (layerName === 'ccs') {
-            return `
+            `,
+            ccs: () => `
                 <h3>${properties.CENTRE_NAME}</h3>
                 <b>Address:</b> ${properties.ADDRESS}<br>
                 ${properties.LISTED ? `<b>Listed:</b> ${properties.LISTED}<br>` : ''}
                 ${properties.LINK ? `<a href=${properties.LINK} target='_blank'>Centre Website</a>` : ''}
             `
         }
-        else return '<p>No details available</p>'
+        
+        return popupTemplates[layerName] ? popupTemplates[layerName]() : '<p>No details available</p>'
     }
 
     /**
@@ -467,11 +491,11 @@
         } else {
             if (!layersData[name]) {
                 fetch(`/layer/${name}`)
-                .then(r => r.json())
-                .then(data => {
-                    layersData[name] = data
-                    createLayer(name)
-                })
+                    .then(r => r.json())
+                    .then(data => {
+                        layersData[name] = data
+                        createLayer(name)
+                    })
             } else {
                 createLayer(name)
             }
@@ -485,22 +509,27 @@
         sitesFilter = document.getElementById('site-search').value
         const sitesCheckbox = document.querySelector('input[data-layer="sites"]')
         
+        // Remove existing sites layer
         if (activeLayers['sites']) {
             map.removeLayer(activeLayers['sites'])
             delete activeLayers['sites']
         }
 
-        if (layersData['sites']) {
+        // Load and create filtered sites layer
+        const loadAndCreateSites = () => {
             createLayer('sites')
             sitesCheckbox.checked = true
+        }
+
+        if (layersData['sites']) {
+            loadAndCreateSites()
         } else {
             fetch('/layer/sites')
-            .then(r => r.json())
-            .then(data => {
-                layersData['sites'] = data
-                createLayer('sites')
-                sitesCheckbox.checked = true
-            })
+                .then(r => r.json())
+                .then(data => {
+                    layersData['sites'] = data
+                    loadAndCreateSites()
+                })
         }
     }
 
