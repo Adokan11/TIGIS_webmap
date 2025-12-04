@@ -1,7 +1,6 @@
-(a) revamp how layers work
-(b) revamp how search works
-(c) add filters for sites
-
+(b) revamp how search works (filters)
+(c) add filters for greenspace that are on the map (maybe ccs as well)
+(c) uni logo bottom left
 (d) when hovering site name shows up
 
 line between site and its CC?
