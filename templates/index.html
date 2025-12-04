@@ -2,12 +2,12 @@
 <html>
 <head>
     <title>Webmap Dev</title>
-    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+    <link rel = 'stylesheet' href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
     <style>
         body {margin:0; font-family: Arial, sans-serif}
         #map {height: 100vh}
         label {display: block; margin: 8px 0; font-weight: bold}
-        input[type="checkbox"] {cursor: pointer}
+        input[type = 'checkbox'] {cursor: pointer}
         .controls button:hover {background: #661a40}
         .controls {
             position: absolute; top: 0; left: 0; bottom: 0; z-index: 1000;
@@ -68,34 +68,34 @@
 <body>
 
 <!-- Layer control panel -->
-<div class='controls'>
+<div class = 'controls'>
     <h2>Webmap</h2>
     <p>Description ... blah blah blah</p>
     <h3>Layers</h3>
     {% for layer in layers %}
     {% if layer == 'buffers' %}
-    <label class='layer-indent' id='buffers-toggle'>
+    <label class = 'layer-indent' id = 'buffers-toggle'>
     {% else %}
     <label>
     {% endif %}
-        <input type='checkbox' checked onclick='toggle("{{ layer }}")' data-layer = '{{ layer }}'>
-        <span class='layer-label' data-layer='{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
+        <input type = 'checkbox' checked onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
+        <span class = 'layer-label' data-layer = '{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
     </label>
     {% endfor %}
     <h3>Search Sites</h3>
-    <input type = "text" id = "site-search" placeholder = "Search by name">
-    <button onclick = "searchSites()">Search</button>
+    <input type = 'text' id = 'site-search' placeholder = 'Search by name'>
+    <button onclick = 'searchSites()'>Search</button>
 </div>
 
 <!-- Site details panel -->
-<div class = "site-details" id = "site-details">
-    <span class = "close-btn" onclick = "clearSelection()">&times;</span>
-    <div id = "details-content"></div>
+<div class = 'site-details' id = 'site-details'>
+    <span class = 'close-btn' onclick = 'clearSelection()'>&times;</span>
+    <div id = 'details-content'></div>
 </div>
 
 <div id = 'map'></div>
 
-<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+<script src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
 <script>
 
     // Define all layer styles and labels in one place
@@ -119,14 +119,16 @@
             label: 'Sites',
             color: '#882255',
             background: '#88225530',
-            radius: 5,
+            radius: 7,
+            bigradius: 10,
             fillOpacity: 0.5},
         ccs: {
             defaultOn: false,
             label: 'All Community Centres',
             color: '#999933',
             background: '#99993330',
-            radius: 5,
+            radius: 7,
+            bigradius: 10,
             fillOpacity: 0.5}
     }
 
@@ -171,7 +173,7 @@
         selectedSiteLayer = L.circleMarker(latlng, {
             ...LAYER_CONFIG.sites,
             fillOpacity: 1,
-            radius: 8,
+            radius: LAYER_CONFIG.sites.bigradius,
             pane: 'sitesPane'
         }).addTo(map)
         
@@ -241,90 +243,90 @@
         let html = `<h3>${details.site_info.ENT_TITLE}</h3>`
 
         // basic site info
-        html += `<div class="detail-section" style = "border-color: ${LAYER_CONFIG.sites.color}; 
-            color: ${LAYER_CONFIG.sites.color}; background: ${LAYER_CONFIG.sites.background}">
-            <div class="detail-row">
-                <span class="detail-label">Final Score:</span>
-                <span class="detail-value">${details.site_info.FINAL_SCORE?.toLocaleString() || 'N/A'}</span>
+        html += `<div class = 'detail-section' style = 'border-color: ${LAYER_CONFIG.sites.color}; 
+            color: ${LAYER_CONFIG.sites.color}; background: ${LAYER_CONFIG.sites.background}'>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Final Score:</span>
+                <span class = 'detail-value'>${details.site_info.FINAL_SCORE?.toLocaleString() || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Site Rank:</span>
-                <span class="detail-value">${details.site_info.RANK?.toLocaleString()}/65</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Site Rank:</span>
+                <span class = 'detail-value'>${details.site_info.RANK?.toLocaleString()}/65</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Designated:</span>
-                <span class="detail-value">${details.site_info.DESIGNATED || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Designated:</span>
+                <span class = 'detail-value'>${details.site_info.DESIGNATED || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Ref:</span>
-                <span class="detail-value">${details.site_info.DES_REF || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Ref:</span>
+                <span class = 'detail-value'>${details.site_info.DES_REF || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <a href='${details.site_info.LINK}' target='_blank'>Site Website</a>
+            <div class = 'detail-row'>
+                <a href='${details.site_info.LINK}' target = '_blank'>Site Website</a>
             </div>
          </div>`
         
         //buffer zone
-        html += `<div class="detail-section" style = "border-color: ${LAYER_CONFIG.buffers.color}; 
-            color: ${LAYER_CONFIG.buffers.color}; background: ${LAYER_CONFIG.buffers.background}">
+        html += `<div class = 'detail-section' style = 'border-color: ${LAYER_CONFIG.buffers.color}; 
+            color: ${LAYER_CONFIG.buffers.color}; background: ${LAYER_CONFIG.buffers.background}'>
             <h4>Buffer Zone:</h4>
-            <div class="detail-row">
-                <span class="detail-label">Population:</span>
-                <span class="detail-value">${details.site_catchment.POPULATION?.toLocaleString() || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Population:</span>
+                <span class = 'detail-value'>${details.site_catchment.POPULATION?.toLocaleString() || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Bus Routes:</span>
-                <span class="detail-value">${details.site_catchment.NUM_BUS_ROUTES || 0}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Bus Routes:</span>
+                <span class = 'detail-value'>${details.site_catchment.NUM_BUS_ROUTES || 0}</span>
             </div>
             <h4>SIMD Ranks:</h4>
-            <div class="detail-row">
-                <span class="detail-label">Average Rank:</span>
-                <span class="detail-value">${Math.round(details.simd_score.COMP_SIMD || 0).toLocaleString()}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Average Rank:</span>
+                <span class = 'detail-value'>${Math.round(details.simd_score.COMP_SIMD || 0).toLocaleString()}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Income:</span>
-                <span class="detail-value">${Math.round(details.simd_score.AVG_INCOME || 0).toLocaleString()}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Income:</span>
+                <span class = 'detail-value'>${Math.round(details.simd_score.AVG_INCOME || 0).toLocaleString()}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Employment:</span>
-                <span class="detail-value">${Math.round(details.simd_score.AVG_EMPLOY || 0).toLocaleString()}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Employment:</span>
+                <span class = 'detail-value'>${Math.round(details.simd_score.AVG_EMPLOY || 0).toLocaleString()}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Health:</span>
-                <span class="detail-value">${Math.round(details.simd_score.AVG_HEALTH || 0).toLocaleString()}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Health:</span>
+                <span class = 'detail-value'>${Math.round(details.simd_score.AVG_HEALTH || 0).toLocaleString()}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Access:</span>
-                <span class="detail-value">${Math.round(details.simd_score.AVG_ACCESS || 0).toLocaleString()}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Access:</span>
+                <span class = 'detail-value'>${Math.round(details.simd_score.AVG_ACCESS || 0).toLocaleString()}</span>
             </div>
         </div>`
 
         // Nearest Open Space
-        html += `<div class="detail-section" style = "border-color: ${LAYER_CONFIG.spaces.color}; 
-            color: ${LAYER_CONFIG.spaces.color}; background: ${LAYER_CONFIG.spaces.background}">
+        html += `<div class = 'detail-section' style = 'border-color: ${LAYER_CONFIG.spaces.color}; 
+            color: ${LAYER_CONFIG.spaces.color}; background: ${LAYER_CONFIG.spaces.background}'>
             <h4>Nearest Green Space: </h4>
-            <div class="detail-row">
-                <span class="detail-label">${details.open_spaces.NAME || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>${details.open_spaces.NAME || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Type:</span>
-                <span class="detail-value">${details.open_spaces.TYPE || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Type:</span>
+                <span class = 'detail-value'>${details.open_spaces.TYPE || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Area:</span>
-                <span class="detail-value">${details.open_spaces.AREA_HA?.toFixed(3) || 'N/A'} hectares</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>Area:</span>
+                <span class = 'detail-value'>${details.open_spaces.AREA_HA?.toFixed(3) || 'N/A'} hectares</span>
             </div>
         </div>`
         
         // Nearest Community Centre
-        html += `<div class="detail-section" style = "border-color: ${LAYER_CONFIG.ccs.color}; 
-            color: ${LAYER_CONFIG.ccs.color}; background: ${LAYER_CONFIG.ccs.background}">
+        html += `<div class = 'detail-section' style = 'border-color: ${LAYER_CONFIG.ccs.color}; 
+            color: ${LAYER_CONFIG.ccs.color}; background: ${LAYER_CONFIG.ccs.background}'>
             <h4>Nearest Community Centre:</h4>
-            <div class="detail-row">
-                <span class="detail-label">${details.community_centres.CENTRE_NAME || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-label'>${details.community_centres.CENTRE_NAME || 'N/A'}</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-value">${details.community_centres.ADDRESS || 'N/A'}</span>
+            <div class = 'detail-row'>
+                <span class = 'detail-value'>${details.community_centres.ADDRESS || 'N/A'}</span>
             </div>
         </div>`
         
@@ -381,7 +383,7 @@
                     pointToLayer: (feature, latlng) => {
                         return L.circleMarker(latlng, {
                             ...style,
-                            radius: 8,
+                            radius: style.bigradius,
                             fillOpacity: 1
                         })
                     },
@@ -526,7 +528,7 @@ function infoPopup(properties, layerName) {
         // Show/hide buffers toggle based on sites selection
         if (name === 'sites') {
             const buffersToggle = document.getElementById('buffers-toggle')
-            const buffersCheckbox = document.querySelector('input[data-layer="buffers"]')
+            const buffersCheckbox = document.querySelector('input[data-layer = "buffers"]')
             
             if (activeLayers['sites']) {
                 buffersToggle.classList.add('visible')
@@ -547,7 +549,7 @@ function infoPopup(properties, layerName) {
      */
     function searchSites() {
         sitesFilter = document.getElementById('site-search').value
-        const sitesCheckbox = document.querySelector('input[data-layer="sites"]')
+        const sitesCheckbox = document.querySelector('input[data-layer = "sites"]')
         
         // Remove existing sites layer
         if (activeLayers['sites']) {
@@ -574,7 +576,7 @@ function infoPopup(properties, layerName) {
     }
 
     // Auto-load layers that are defaultOn
-    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    document.querySelectorAll('input[type = "checkbox"]').forEach(cb => {
         const layerName = cb.dataset.layer
         if (LAYER_CONFIG[layerName]?.defaultOn) {
             toggle(layerName)
