@@ -30,6 +30,15 @@
         .detail-row {display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px}
         .detail-label {font-weight: bold; color: #555}
         .detail-value {color: #333}
+        .leaflet-popup-close-button {
+            font-size: 20px !important;
+            font-weight: bold !important;
+            color: #000 !important;
+            padding: 4px 8px !important;
+        }
+        .leaflet-popup-close-button:hover {
+            color: #ff0000 !important;
+        }
     </style>
 </head>
 <body>
@@ -133,8 +142,22 @@
         selectedSite = desRef
         selectedSiteLayer = layer
         
-        // Fetch site details
-        fetch(`/site_details/${desRef}`)
+        // Ensure required layers are loaded before fetching site details
+        const requiredLayers = ['buffers', 'spaces', 'ccs']
+        const loadPromises = requiredLayers.map(layerName => {
+            if (!layersData[layerName]) {
+                return fetch(`/layer/${layerName}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        layersData[layerName] = data
+                    })
+            }
+            return Promise.resolve()
+        })
+        
+        // Wait for all required layers to load, then fetch site details
+        Promise.all(loadPromises)
+            .then(() => fetch(`/site_details/${desRef}`))
             .then(r => r.json())
             .then(data => {
                 displaySiteDetails(data)
@@ -144,6 +167,31 @@
                 console.error('Error fetching site details:', err)
                 alert('Error loading site details')
             })
+    }
+
+    /**
+     * Add popup and hover functionality to a layer feature
+     */
+    function addFeatureInteractivity(feature, layer, layerName) {
+        const style = LAYER_CONFIG[layerName]
+        
+        // Add hover effect
+        const hoverOpacity = layerName === 'ccs' ? 1 : 0.4
+        layer.on('mouseover', function() {this.setStyle({fillOpacity: hoverOpacity})})
+        layer.on('mouseout', function() {this.setStyle({fillOpacity: style.fillOpacity})})
+        
+        // Add popup
+        const popupContent = infoPopup(feature.properties, layerName)
+        layer.bindPopup(popupContent, {
+            className: `custom-popup-${layerName}`,
+        })
+        layer.on('popupopen', (e) => {
+            const el = e.popup.getElement()
+            if (el) {
+                el.style.border = `4px solid ${style.color}`
+                el.style.borderRadius = '15px'
+            }
+        })
     }
 
     /**
@@ -255,43 +303,47 @@
                 f => f.properties.DES_REF === details.site_catchment.DES_REF
             )
             if (bufferFeature) {
+                const style = LAYER_CONFIG.buffers
                 highlightedLayers.buffer = L.geoJSON(bufferFeature, {
-                    style: {...LAYER_CONFIG.buffers}
+                    style: {...style},
+                    onEachFeature: (feature, layer) => addFeatureInteractivity(feature, layer, 'buffers')
                 }).addTo(map)
             }
         }
-        else {alert('Error loading site buffer')}
 
         // Find and highlight the corresponding green space
         if (details.open_spaces && layersData.spaces) {
             const spaceFeature = layersData.spaces.features.find(
                 f => f.properties.OBJECTID_1 === details.open_spaces.OS_ID
             )
-            console.log(details.open_spaces.OS_ID)
             if (spaceFeature) {
+                const style = LAYER_CONFIG.spaces
                 highlightedLayers.space = L.geoJSON(spaceFeature, {
-                    style: {...LAYER_CONFIG.spaces}
+                    style: {...style},
+                    onEachFeature: (feature, layer) => addFeatureInteractivity(feature, layer, 'spaces')
                 }).addTo(map)
             }
         }
-        else {alert('Error loading site open space')}
         
         // Find and highlight the corresponding community centre
-        const ccFeature = layersData.ccs.features.find(
-            f => f.properties.CENTRE_ID === details.community_centres.CENTRE_ID
-        )
-        if (ccFeature) {
-            highlightedLayers.cc = L.geoJSON(ccFeature, {
-                pointToLayer: (feature, latlng) => {
-                    return L.circleMarker(latlng, {
-                        ...LAYER_CONFIG.ccs,
-                        radius: 8,
-                        fillOpacity: 1
-                    })
-                }
-            }).addTo(map)
+        if (details.community_centres && layersData.ccs) {
+            const ccFeature = layersData.ccs.features.find(
+                f => f.properties.CENTRE_ID === details.community_centres.CENTRE_ID
+            )
+            if (ccFeature) {
+                const style = LAYER_CONFIG.ccs
+                highlightedLayers.cc = L.geoJSON(ccFeature, {
+                    pointToLayer: (feature, latlng) => {
+                        return L.circleMarker(latlng, {
+                            ...style,
+                            radius: 8,
+                            fillOpacity: 1
+                        })
+                    },
+                    onEachFeature: (feature, layer) => addFeatureInteractivity(feature, layer, 'ccs')
+                }).addTo(map)
+            }
         }
-        else {alert('Error loading site community centre')}
         
     }
 
@@ -366,23 +418,8 @@
                         }
                     })
                 } else {
-                    
-                    // Add hover effect
-                    layer.on('mouseover', function() {this.setStyle({fillOpacity: name === 'ccs' ? 1 : 0.4})})
-                    layer.on('mouseout', function() {this.setStyle({fillOpacity: style.fillOpacity})})
-                    
-                    // For other layers, keep popup behavior
-                    const popupContent = infoPopup(feature.properties, name)
-                    layer.bindPopup(popupContent, {
-                        className: `custom-popup-${name}`,
-                    })
-                    layer.on('popupopen', (e) => {
-                        const el = e.popup.getElement()
-                        if (el) {
-                            el.style.border = `4px solid ${style.color}`
-                            el.style.borderRadius = '15px'
-                        }
-                    })
+                    // For other layers, add interactivity with popup
+                    addFeatureInteractivity(feature, layer, name)
                 }
             }
         }).addTo(map)
