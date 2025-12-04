@@ -7,6 +7,7 @@
         body {margin:0; font-family: Arial, sans-serif}
         #map {height: 100vh}
         label {display: block; margin: 8px 0; font-weight: bold}
+        input[type="checkbox"] {cursor: pointer}
         .controls button:hover {background: #661a40}
         .controls {
             position: absolute; top: 0; left: 0; bottom: 0; z-index: 1000;
@@ -23,6 +24,13 @@
             border-radius: 4px; 
             cursor: pointer;
             font-weight: bold;
+        }
+        .layer-indent {
+            margin-left: 20px;
+            display: none;
+        }
+        .layer-indent.visible {
+            display: block;
         }
         .leaflet-popup-close-button:hover {color: #ff0000 !important;}
         .leaflet-popup-close-button {
@@ -61,9 +69,15 @@
 
 <!-- Layer control panel -->
 <div class='controls'>
+    <h2>Webmap</h2>
+    <p>Description ... blah blah blah</p>
     <h3>Layers</h3>
     {% for layer in layers %}
+    {% if layer == 'buffers' %}
+    <label class='layer-indent' id='buffers-toggle'>
+    {% else %}
     <label>
+    {% endif %}
         <input type='checkbox' checked onclick='toggle("{{ layer }}")' data-layer = '{{ layer }}'>
         <span class='layer-label' data-layer='{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
     </label>
@@ -147,17 +161,21 @@
      */
     function selectSite(desRef, layer) {
         // Clear previous selection
-        if (selectedSiteLayer) {selectedSiteLayer.setStyle(LAYER_CONFIG.sites)}
+        if (selectedSiteLayer) {
+        map.removeLayer(selectedSiteLayer)
+        selectedSiteLayer = null
+        }
         
-        // Highlight selected site
-        layer.setStyle({
+        // Create a new highlighted circle for the selected site
+        const latlng = layer.getLatLng()
+        selectedSiteLayer = L.circleMarker(latlng, {
             ...LAYER_CONFIG.sites,
             fillOpacity: 1,
             radius: 8,
-        })
+            pane: 'sitesPane'
+        }).addTo(map)
         
         selectedSite = desRef
-        selectedSiteLayer = layer
         
         // Ensure required layers are loaded before fetching site details
         const requiredLayers = ['buffers', 'spaces', 'ccs']
@@ -189,13 +207,15 @@
     /**
      * Add popup and hover functionality to a layer feature
      */
-    function addFeatureInteractivity(feature, layer, layerName) {
+    function addFeatureInteractivity(feature, layer, layerName, highlight = true) {
         const style = LAYER_CONFIG[layerName]
         
         // Add hover effect
-        const hoverOpacity = layerName === 'ccs' ? 1 : 0.4
-        layer.on('mouseover', function() {this.setStyle({fillOpacity: hoverOpacity})})
-        layer.on('mouseout', function() {this.setStyle({fillOpacity: style.fillOpacity})})
+        if (highlight) {
+            const hoverOpacity = layerName === 'ccs' ? 1 : 0.4
+            layer.on('mouseover', function() {this.setStyle({fillOpacity: hoverOpacity})})
+            layer.on('mouseout', function() {this.setStyle({fillOpacity: style.fillOpacity})})
+        }
         
         // Add popup
         const popupContent = infoPopup(feature.properties, layerName)
@@ -365,7 +385,7 @@
                             fillOpacity: 1
                         })
                     },
-                    onEachFeature: (feature, layer) => addFeatureInteractivity(feature, layer, 'ccs')
+                    onEachFeature: (feature, layer) => addFeatureInteractivity(feature, layer, 'ccs', false)
                 }).addTo(map)
             }
         }
@@ -376,8 +396,11 @@
      * Clear site selection
      */
     function clearSelection() {
-        // Reset selected site marker
-        if (selectedSiteLayer) {selectedSiteLayer.setStyle(LAYER_CONFIG.sites)}
+        // Remove selected site marker
+        if (selectedSiteLayer) {
+            map.removeLayer(selectedSiteLayer)
+            selectedSiteLayer = null
+        }
         
         // Remove highlighted layers
         Object.values(highlightedLayers).forEach(layer => {
@@ -389,7 +412,6 @@
         document.getElementById('site-details').classList.remove('active')
         
         selectedSite = null
-        selectedSiteLayer = null
     }
 
     /**
@@ -500,6 +522,24 @@ function infoPopup(properties, layerName) {
                 createLayer(name)
             }
         }
+        
+        // Show/hide buffers toggle based on sites selection
+        if (name === 'sites') {
+            const buffersToggle = document.getElementById('buffers-toggle')
+            const buffersCheckbox = document.querySelector('input[data-layer="buffers"]')
+            
+            if (activeLayers['sites']) {
+                buffersToggle.classList.add('visible')
+            } else {
+                buffersToggle.classList.remove('visible')
+                // Turn off buffers if sites is turned off
+                if (activeLayers['buffers']) {
+                    buffersCheckbox.checked = false
+                    map.removeLayer(activeLayers['buffers'])
+                    delete activeLayers['buffers']
+                }
+            }
+        }
     }
 
     /**
@@ -540,6 +580,11 @@ function infoPopup(properties, layerName) {
             toggle(layerName)
         }
     })
+
+    // Show buffers toggle if sites is initially on
+    if (LAYER_CONFIG['sites']?.defaultOn) {
+        document.getElementById('buffers-toggle').classList.add('visible')
+    }
 
     // Apply custom labels and colors from config
     document.querySelectorAll('.layer-label').forEach(label => {
