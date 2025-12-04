@@ -1,0 +1,12 @@
+(a) revamp how layers work
+(b) revamp how search works
+(c) add filters for sites
+
+(c) fix initial bug where you can not see a sites space and buffer until they are checked once
+(b) make sites space and buffer perform like normal spaces and buffers.
+(d) when hovering site name shows up
+
+line between site and its CC?
+pointer mouse on toggle boxes
+fix rapid toggle box issues
+change popup X to hover red like site info
