@@ -3,6 +3,7 @@ import oracledb
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
+import datetime
 
 def get_connection():
 
@@ -66,8 +67,13 @@ def get_site_details(des_ref):
     
     conn = get_connection()
     cursor = conn.cursor()
+
+    site_info = _sql_querry(cursor, 'sites', 'DES_REF', des_ref)
+
+    if isinstance(site_info['DESIGNATED'], datetime.datetime):
+        site_info['DESIGNATED'] = site_info['DESIGNATED'].strftime('%Y-%m-%d')
     
-    all_details = {}
+    all_details = {'site_info': site_info}
     
     all_details['site_catchment'] = _sql_querry(cursor, 'site_catchment', 'DES_REF', des_ref)
     
@@ -75,15 +81,13 @@ def get_site_details(des_ref):
     
     all_details['simd_score'] = _sql_querry(cursor, 'simd_score', 'CATCHMENT_ID', catchment_id)
     
-    closest_os_id = _sql_querry(cursor, 'sites', 'DES_REF', des_ref)['CLOSEST_OS_ID']
-    
-    all_details['open_spaces'] = _sql_querry(cursor, 'open_spaces', 'OS_ID', int(closest_os_id))
+    all_details['open_spaces'] = _sql_querry(cursor, 'open_spaces', 'OS_ID', int(site_info['CLOSEST_OS_ID']))
     
     closest_centre_id = _sql_querry(cursor, 'proximity', 'DES_REF', des_ref)['CENTRE_ID']
     
     all_details['community_centres'] = _sql_querry(cursor, 'community_centres', 'CENTRE_ID', int(closest_centre_id))
     
-    print(all_details)
+    #print(all_details)
     
     conn.close()
     

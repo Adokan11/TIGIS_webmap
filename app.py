@@ -48,14 +48,15 @@ def get_site_details(des_ref):
     details = db.get_site_details(des_ref)
     return details
 
-#example
-get_site_details('LB47863')
-#for i in datasets['sites']['DES_REF']:
-#    get_site_details(i)
-
 @app.route('/')
 def index():
     return flask.render_template('index.html', layers = list(datasets.keys()))
+
+#debug
+#get_site_details('LB47863')
+#for i in datasets['sites']['DES_REF']:
+#    get_site_details(i)
+#print(datasets['spaces'].iloc[0])
 
 if __name__ == '__main__':
     app.run(debug = True, port = 5000)
