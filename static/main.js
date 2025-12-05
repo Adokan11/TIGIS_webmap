@@ -660,21 +660,21 @@ function resetScoreFilter() {
     document.getElementById('pop-min').value = 0;
     document.getElementById('pop-max').value = 30000;
     document.getElementById('cc-distance-min').value = 0;
-    document.getElementById('cc-distance-max').value = 10000;
+    document.getElementById('cc-distance-max').value = 5000;
     
     state.scoreMin = 0;
     state.scoreMax = 1;
     state.populationMin = 0;
     state.populationMax = 30000;
     state.ccDistanceMin = 0;
-    state.ccDistanceMax = 10000;
+    state.ccDistanceMax = 5000;
     
     document.getElementById('min-value').textContent = '0.00';
     document.getElementById('max-value').textContent = '1.00';
     document.getElementById('pop-min-value').textContent = '0';
     document.getElementById('pop-max-value').textContent = '30,000';
     document.getElementById('cc-distance-min-value').textContent = '0';
-    document.getElementById('cc-distance-max-value').textContent = '10,000';
+    document.getElementById('cc-distance-max-value').textContent = '5,000';
     
     refreshSitesLayer();
 }
