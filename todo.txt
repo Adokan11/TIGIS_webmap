@@ -1,7 +1,5 @@
-(C) colored ccs
 (B) uni logo bottom left
-(C) search by ref as well
 (D) when hovering site name shows up
 (C) when site is selceted hover defills selected cc @bug
-
-line between site and its CC?
+(C) search button divided into two: one to clear search
+(E) line between site and its CC?
