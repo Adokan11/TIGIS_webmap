@@ -1,5 +1,4 @@
-(a) revamp how search works (filters) (green types)
-(b) colored sites
+(b) revamp how search works (filters) (green types)
 (c) colored ccs
 (c) uni logo bottom left
 (d) when hovering site name shows up

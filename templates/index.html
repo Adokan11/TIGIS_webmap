@@ -63,6 +63,25 @@
         .detail-row {display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px}
         .detail-label {font-weight: bold; color: #555}
         .detail-value {color: #333}
+        .rank-colorbar {
+            display: flex; 
+            height: 20px; 
+            border-radius: 4px; 
+            margin: 8px 0; 
+            box-shadow: inset 0 0 5px #00000020;
+        }
+        .rank-colorbar-segment {
+            flex: 1;
+        }
+        .rank-colorbar-segment:last-child {
+            border-right: none;
+        }
+        .rank-legend {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -95,9 +114,37 @@
         <input type = 'checkbox' checked onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
         <span class = 'layer-label' data-layer = '{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
     </label>
+    {% if layer == 'sites' %}
+    <label class = 'layer-indent' id = 'rank-coloring-toggle' style = 'display: none;'>
+        <input type = 'checkbox' onclick = 'toggleRankColoring()' id = 'rank-coloring-checkbox'>
+        <span style = 'color: #882255; font-weight: bold;'>Color by Rank</span>
+    </label>
+    <div id = 'rank-colorbar-container' class = 'layer-indent' style = 'display: none; margin-bottom: 10px;'>
+        <div class = 'rank-colorbar' id = 'rank-colorbar'></div>
+        <div class = 'rank-legend'>
+            <span>Worst (65)</span>
+            <span>Best (1)</span>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
     {% endfor %}
-    <h3>Search Sites</h3>
+    <h3>Find Sites</h3>
+    <h4>Filters</h4>
+    <h5 style = 'margin-bottom: 3px;'>Final Score</h5>
+    <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
+        <div style = 'flex: 1;'>
+            <label for = 'score-min' style = 'font-weight: normal;'>Min: <span id = 'min-value'>0.00</span></label>
+            <input type = 'range' id = 'score-min' min = '0' max = '1' step = '0.01' value = '0' 
+                   style = 'width: 100%; cursor: pointer;' oninput = 'updateScoreFilter()'>
+        </div>
+        <div style = 'flex: 1;'>
+            <label for = 'score-max' style = 'font-weight: normal;'>Max: <span id = 'max-value'>1.00</span></label>
+            <input type = 'range' id = 'score-max' min = '0' max = '1' step = '0.01' value = '1' 
+                   style = 'width: 100%; cursor: pointer;' oninput = 'updateScoreFilter()'>
+        </div>
+    </div>
+    <button onclick = 'resetScoreFilter()' style = 'background: #aaa; margin-bottom: 15px;'>Reset Filters</button>
     <input type = 'text' id = 'site-search' placeholder = 'Search by name'>
     <button onclick = 'searchSites()'>Search</button>
 </div>
@@ -176,6 +223,70 @@
     let selectedSiteLayer = null
     let highlightedLayers = {}
 
+    // Sites-specific filter term
+    let sitesFilterScore = ''
+    
+    // Score range filter
+    let scoreMin = 0
+    let scoreMax = 1
+
+    // Track rank coloring state
+    let rankColoringEnabled = false
+
+    // Store plasma colormap
+    let plasmaData = null
+
+    /**
+     * Get color based on site rank (1-65)
+     * Using matplotlib plasma colormap from server
+     */
+    function getRankColor(rank) {
+        if (!rank || !plasmaData) return 'rgb(13, 8, 135)'
+        
+        // Normalize rank to 0-1 (1 = 0, 65 = 1)
+        // Invert so rank 1 (best) gets the end of the colormap (yellow)
+        const normalized = (65 - rank) / 64
+        
+        // Find the closest entry in the lookup table
+        const index = Math.round(normalized * (plasmaData.length - 1))
+        const [r, g, b] = plasmaData[index]
+        
+        return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`
+    }
+
+    /**
+     * Toggle rank-based coloring for sites
+     */
+    function toggleRankColoring() {
+        rankColoringEnabled = document.getElementById('rank-coloring-checkbox').checked
+        const rankColorbar = document.getElementById('rank-colorbar-container')
+        
+        // Show/hide colorbar based on checkbox state
+        rankColorbar.style.display = rankColoringEnabled ? 'block' : 'none'
+        
+        // Recreate sites layer with new coloring
+        if (activeLayers['sites']) {
+            map.removeLayer(activeLayers['sites'])
+            delete activeLayers['sites']
+            createLayer('sites')
+        }
+    }
+
+    /**
+     * Generate colorbar gradient
+     */
+    function generateRankColorbar() {
+        const container = document.getElementById('rank-colorbar')
+        container.innerHTML = ''
+        
+        for (let i = 65; i >= 1; i--) {
+            const segment = document.createElement('div')
+            segment.className = 'rank-colorbar-segment'
+            segment.style.backgroundColor = getRankColor(i)
+            container.appendChild(segment)
+        }
+    }
+    
     /**
      * Handle site selection
      */
@@ -442,6 +553,22 @@
         let data = layersData[name]
 
         // Apply filter for sites layer if set
+        if (name === 'sites' && (sitesFilterScore || scoreMin > 0 || scoreMax < 100)) {
+            data = {
+                type: 'FeatureCollection',
+                features: data.features.filter(f => {
+                    const matchesName = !sitesFilterScore || 
+                        f.properties.ENT_TITLE.toLowerCase().includes(sitesFilterScore.toLowerCase())
+                    const matchesScore = (f.properties.FINAL_SCORE >= scoreMin) && 
+                        (f.properties.FINAL_SCORE <= scoreMax)
+                    return matchesName && matchesScore
+                })
+            }
+        }
+        
+        // ...existing code...
+
+        // Apply filter for sites layer if set
         if (name === 'sites' && sitesFilter) {
             data = {
                 type: 'FeatureCollection',
@@ -469,8 +596,12 @@
             style: style,
             pointToLayer: (feature, latlng) => {
                 if (name === 'sites' || name === 'ccs') {
+                    const siteStyle = rankColoringEnabled ? 
+                        {...LAYER_CONFIG.sites, fillColor: getRankColor(feature.properties.RANK)} :
+                        LAYER_CONFIG.sites
+                    
                     return L.circleMarker(latlng, {
-                        ...style,
+                        ...siteStyle,
                         pane: 'sitesPane'
                     })
                 }
@@ -623,15 +754,23 @@
             }
         }
         
-        // Show/hide buffers toggle based on sites selection
+        // Show/hide rank coloring and buffers toggles based on sites selection
         if (name === 'sites') {
             const buffersToggle = document.getElementById('buffers-toggle')
+            const rankToggle = document.getElementById('rank-coloring-toggle')
+            const rankColorbar = document.getElementById('rank-colorbar-container')
             const buffersCheckbox = document.querySelector('input[data-layer = "buffers"]')
             
             if (activeLayers['sites']) {
                 buffersToggle.classList.add('visible')
+                rankToggle.style.display = 'block'
+                rankColorbar.style.display = 'block'
             } else {
                 buffersToggle.classList.remove('visible')
+                rankToggle.style.display = 'none'
+                rankColorbar.style.display = 'none'
+                rankColoringEnabled = false
+                document.getElementById('rank-coloring-checkbox').checked = false
                 // Turn off buffers if sites is turned off
                 if (activeLayers['buffers']) {
                     buffersCheckbox.checked = false
@@ -639,6 +778,49 @@
                     delete activeLayers['buffers']
                 }
             }
+        }
+    }
+
+    /**
+     * Update score filter values and refresh sites layer
+     */
+    function updateScoreFilter() {
+        scoreMin = parseFloat(document.getElementById('score-min').value)
+        scoreMax = parseFloat(document.getElementById('score-max').value)
+        
+        // Ensure min doesn't exceed max and vice versa
+        if (scoreMin > scoreMax) {
+            [scoreMin, scoreMax] = [scoreMax, scoreMin]
+            document.getElementById('score-min').value = scoreMin
+            document.getElementById('score-max').value = scoreMax
+        }
+        
+        document.getElementById('min-value').textContent = scoreMin.toFixed(2)
+        document.getElementById('max-value').textContent = scoreMax.toFixed(2)
+        
+        // Refresh sites layer if active
+        if (activeLayers['sites']) {
+            map.removeLayer(activeLayers['sites'])
+            delete activeLayers['sites']
+            createLayer('sites')
+        }
+    }
+
+    /**
+     * Reset score filter to full range
+     */
+    function resetScoreFilter() {
+        document.getElementById('score-min').value = 0
+        document.getElementById('score-max').value = 1
+        scoreMin = 0
+        scoreMax = 1
+        document.getElementById('min-value').textContent = '0.00'
+        document.getElementById('max-value').textContent = '1.00'
+        
+        if (activeLayers['sites']) {
+            map.removeLayer(activeLayers['sites'])
+            delete activeLayers['sites']
+            createLayer('sites')
         }
     }
 
@@ -673,6 +855,14 @@
         }
     }
 
+    // Load plasma colormap from server
+    fetch('/plasma')
+        .then(r => r.json())
+        .then(data => {
+            plasmaData = data
+            generateRankColorbar()
+        })
+
     // Auto-load layers that are defaultOn
     document.querySelectorAll('input[type = "checkbox"]').forEach(cb => {
         const layerName = cb.dataset.layer
@@ -685,9 +875,11 @@
         }
     })
 
-    // Show buffers toggle if sites is initially on
+    // Show sub toggle if sites is initially on
     if (LAYER_CONFIG['sites']?.defaultOn) {
         document.getElementById('buffers-toggle').classList.add('visible')
+        document.getElementById('rank-coloring-toggle').style.display = 'block'
+        document.getElementById('rank-colorbar-container').style.display = 'none'
     }
 
     // Apply custom labels and colors from config

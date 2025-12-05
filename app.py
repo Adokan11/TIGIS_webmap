@@ -3,6 +3,7 @@ import pandas as pd
 import geopandas as gpd
 import pathlib
 import dotenv
+import json
 import db
 
 dotenv.load_dotenv()  # only in development
@@ -41,6 +42,14 @@ new_len = datasets['spaces'].shape[0]
 print(f'Loaded {len(datasets["sites"])} sites with {len(datasets["buffers"])} buffer zones, ' + 
     f'{str(new_len)}/{str(max_len)} green spaces with '
     f'{len(good_space_types)}/{len(space_types)} classifications, and {len(datasets["ccs"])} community centres.')
+
+# Load plasma colormap at startup
+with open(DATA_DIR / 'plasma.dat', 'r') as f:
+    plasma_data = json.load(f)
+
+@app.route('/plasma')
+def get_plasma():
+    return json.dumps(plasma_data)
 
 @app.route('/layer/<layer_name>')
 def get_layer(layer_name):
