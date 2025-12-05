@@ -40,8 +40,11 @@ def sql_to_gdf(name):
 
     #create gdf
     df = pd.DataFrame(rows, columns = columns)
-    geometry = [Point(xy) for xy in zip(df['XCOORD'], df['YCOORD'])]
-    gdf = gpd.GeoDataFrame(df, geometry = geometry, crs = 'EPSG:27700')
+    if name != 'proximity':
+        geometry = [Point(xy) for xy in zip(df['XCOORD'], df['YCOORD'])]
+        gdf = gpd.GeoDataFrame(df, geometry = geometry, crs = 'EPSG:27700')
+    else:
+        gdf = df
     
     conn.close()
     
@@ -84,6 +87,7 @@ def get_site_details(des_ref):
     all_details['open_spaces'] = _sql_querry(cursor, 'open_spaces', 'OS_ID', int(site_info['CLOSEST_OS_ID']))
     
     closest_centre_id = _sql_querry(cursor, 'proximity', 'DES_REF', des_ref)['CENTRE_ID']
+    all_details['site_info']['DISTANCE_M'] = _sql_querry(cursor, 'proximity', 'DES_REF', des_ref)['DISTANCE_M']
     
     all_details['community_centres'] = _sql_querry(cursor, 'community_centres', 'CENTRE_ID', int(closest_centre_id))
     

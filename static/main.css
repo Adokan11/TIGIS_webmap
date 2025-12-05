@@ -94,6 +94,7 @@ label input[type = 'checkbox'] {
 input[type = 'range'] {
     width: 100%;
     box-sizing: border-box;
+    cursor: pointer;
 }
 
 .site-details {

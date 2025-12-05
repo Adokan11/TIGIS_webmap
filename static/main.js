@@ -55,6 +55,8 @@ const state = {
     scoreMax: 1,
     populationMin: 0,
     populationMax: 30000,
+    ccDistanceMin: 0,
+    ccDistanceMax: 5000,
     rankColoringEnabled: false,
     plasmaData: null,
     siteBufferPopulation: {},
@@ -248,6 +250,9 @@ function filterSitesData(data) {
             const bufferPop = state.siteBufferPopulation[f.properties.DES_REF] || 0;
             const matchesPopulation = (bufferPop >= state.populationMin) && (bufferPop <= state.populationMax);
             
+            const ccDistance = f.properties.DISTANCE_M || 0;
+            const matchesCCDistance = (ccDistance >= state.ccDistanceMin) && (ccDistance <= state.ccDistanceMax);
+            
             // Filter by green space types if checkbox is enabled
             let matchesSpaceTypes = true;
             if (state.useSpaceTypeFilter && state.activeSpaceTypes.size > 0) {
@@ -262,7 +267,7 @@ function filterSitesData(data) {
                     state.activeSpaceTypes.has(matchingSpace.properties.PAN65);
             }
             
-            return matchesSearch && matchesScore && matchesPopulation && matchesSpaceTypes;
+            return matchesSearch && matchesScore && matchesPopulation && matchesCCDistance && matchesSpaceTypes;
         })
     };
 }
@@ -509,6 +514,7 @@ function displaySiteDetails(details) {
     
     // Community centre section
     html += createDetailSection('Nearest Community Centre', LAYER_CONFIG.ccs, [
+        ['Distance from', `${Math.round(details.site_info.DISTANCE_M || 'N/A').toLocaleString()} meters`],
         ['Name', details.community_centres.CENTRE_NAME || 'N/A'],
         ['Address', details.community_centres.ADDRESS || 'N/A']
     ]);
@@ -632,21 +638,43 @@ function updatePopulationFilter() {
     refreshSitesLayer();
 }
 
+function updateCCDistanceFilter() {
+    state.ccDistanceMin = parseFloat(document.getElementById('cc-distance-min').value);
+    state.ccDistanceMax = parseFloat(document.getElementById('cc-distance-max').value);
+    
+    if (state.ccDistanceMin > state.ccDistanceMax) {
+        [state.ccDistanceMin, state.ccDistanceMax] = [state.ccDistanceMax, state.ccDistanceMin];
+        document.getElementById('cc-distance-min').value = state.ccDistanceMin;
+        document.getElementById('cc-distance-max').value = state.ccDistanceMax;
+    }
+    
+    document.getElementById('cc-distance-min-value').textContent = state.ccDistanceMin.toLocaleString();
+    document.getElementById('cc-distance-max-value').textContent = state.ccDistanceMax.toLocaleString();
+    
+    refreshSitesLayer();
+}
+
 function resetScoreFilter() {
     document.getElementById('score-min').value = 0;
     document.getElementById('score-max').value = 1;
     document.getElementById('pop-min').value = 0;
     document.getElementById('pop-max').value = 30000;
+    document.getElementById('cc-distance-min').value = 0;
+    document.getElementById('cc-distance-max').value = 10000;
     
     state.scoreMin = 0;
     state.scoreMax = 1;
     state.populationMin = 0;
     state.populationMax = 30000;
+    state.ccDistanceMin = 0;
+    state.ccDistanceMax = 10000;
     
     document.getElementById('min-value').textContent = '0.00';
     document.getElementById('max-value').textContent = '1.00';
     document.getElementById('pop-min-value').textContent = '0';
     document.getElementById('pop-max-value').textContent = '30,000';
+    document.getElementById('cc-distance-min-value').textContent = '0';
+    document.getElementById('cc-distance-max-value').textContent = '10,000';
     
     refreshSitesLayer();
 }

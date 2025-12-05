@@ -20,6 +20,10 @@ datasets = {
     'ccs' : db.sql_to_gdf('community_centres')
 }
 
+# cc proximity for filters
+proximity_df = db.sql_to_gdf('proximity')
+datasets['sites'] = pd.concat([datasets['sites'], proximity_df['DISTANCE_M']], axis = 1)
+
 # Process each dataset
 for name, gdf in datasets.items():
     gdf = gdf.to_crs(epsg = 4326)

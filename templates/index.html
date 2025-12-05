@@ -89,6 +89,19 @@
                     <input type = 'range' id = 'pop-max' min = '0' max = '30000' step = '200' value = '30000' oninput = 'updatePopulationFilter()'>
                 </div>
             </div>
+
+            <h5 style = 'margin-bottom: 5px; margin-top: 5px; color: #999933'>Community Centre Proximity:</h5>
+            <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
+                <div style = 'flex: 1;'>
+                    <label for = 'cc-distance-min' style = 'font-weight: normal;'>Min: <span id = 'cc-distance-min-value'>0</span>m</label>
+                    <input type = 'range' id = 'cc-distance-min' min = '0' max = '5000' step = '100' value = '0' oninput = 'updateCCDistanceFilter()'>
+                </div>
+                <div style = 'flex: 1;'>
+                    <label for = 'cc-distance-max' style = 'font-weight: normal;'>Max: <span id = 'cc-distance-max-value'>5000</span>m</label>
+                    <input type = 'range' id = 'cc-distance-max' min = '0' max = '5000' step = '100' value = '5000' oninput = 'updateCCDistanceFilter()'>
+                </div>
+            </div>
+
             <button onclick = 'resetScoreFilter()' class = 'secondary'>Reset Filters</button>
             <br></br>
             <input type = 'text' id = 'site-search' placeholder = 'Search by name or reference...'>
