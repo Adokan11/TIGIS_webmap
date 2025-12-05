@@ -57,7 +57,8 @@ const state = {
     populationMax: 30000,
     rankColoringEnabled: false,
     plasmaData: null,
-    siteBufferPopulation: {}
+    siteBufferPopulation: {},
+    useSpaceTypeFilter: false
 };
 
 let map;
@@ -227,13 +228,19 @@ function createPointMarker(feature, latlng, name) {
     return L.marker(latlng);
 }
 
+function toggleSpaceTypeFilter() {
+    state.useSpaceTypeFilter = document.getElementById('use-space-filter').checked;
+    refreshSitesLayer();
+}
+
 function filterSitesData(data) {
     return {
         type: 'FeatureCollection',
         features: data.features.filter(f => {
+            const searchTerm = state.sitesFilter.toLowerCase();
             const matchesSearch = !state.sitesFilter || 
-                f.properties.ENT_TITLE.toLowerCase().includes(state.sitesFilter.toLowerCase()) ||
-                f.properties.DES_REF.toLowerCase().includes(state.sitesFilter.toLowerCase());
+                f.properties.ENT_TITLE.toLowerCase().includes(searchTerm) ||
+                f.properties.DES_REF.toLowerCase().includes(searchTerm);
             
             const matchesScore = (f.properties.FINAL_SCORE >= state.scoreMin) && 
                 (f.properties.FINAL_SCORE <= state.scoreMax);
@@ -241,7 +248,21 @@ function filterSitesData(data) {
             const bufferPop = state.siteBufferPopulation[f.properties.DES_REF] || 0;
             const matchesPopulation = (bufferPop >= state.populationMin) && (bufferPop <= state.populationMax);
             
-            return matchesSearch && matchesScore && matchesPopulation;
+            // Filter by green space types if checkbox is enabled
+            let matchesSpaceTypes = true;
+            if (state.useSpaceTypeFilter && state.activeSpaceTypes.size > 0) {
+                const closestOsId = Number(f.properties.CLOSEST_OS_ID);
+                
+                const matchingSpace = state.layersData['spaces']?.features?.find(space => {
+                    const spaceId = Number(space.properties.OBJECTID_1);
+                    return spaceId === closestOsId;
+                });
+                
+                matchesSpaceTypes = matchingSpace && 
+                    state.activeSpaceTypes.has(matchingSpace.properties.PAN65);
+            }
+            
+            return matchesSearch && matchesScore && matchesPopulation && matchesSpaceTypes;
         })
     };
 }
@@ -303,6 +324,11 @@ function toggleSpaceType(spaceType) {
     
     if (state.activeSpaceTypes.size > 0) {
         createLayer('spaces');
+    }
+    
+    // Refresh sites layer if space type filter is enabled
+    if (state.useSpaceTypeFilter) {
+        refreshSitesLayer();
     }
 }
 

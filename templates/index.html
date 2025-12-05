@@ -60,6 +60,11 @@
         <section>
             <h3>Find Sites</h3>
             <h4 style = 'margin-bottom: 10px'>Filters</h4>
+
+            <label style = 'margin-bottom: 10px;'>
+                <input type = 'checkbox' id = 'use-space-filter' onchange = 'toggleSpaceTypeFilter()'>
+                <span style = 'color: #117733; font-weight: bold; font-size: 14px;'>By Selected Green Space Types</span>
+            </label>
             
             <h5 style = 'margin-bottom: 5px; margin-top: 5px; color: #882255'>Final Score:</h5>
             <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
@@ -86,7 +91,7 @@
             </div>
             <button onclick = 'resetScoreFilter()' class = 'secondary'>Reset Filters</button>
             <br></br>
-            <input type = 'text' id = 'site-search' placeholder = 'Search by name'>
+            <input type = 'text' id = 'site-search' placeholder = 'Search by name or reference...'>
             <button onclick = 'searchSites()'>Search</button>
         </section>
     </div>
