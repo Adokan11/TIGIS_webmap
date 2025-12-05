@@ -29,8 +29,18 @@ for name, gdf in datasets.items():
             gdf[col] = gdf[col].dt.strftime('%Y-%m-%d')
 
     datasets[name] = gdf
+
+# Only use some of the green spaces
+space_types = sorted(datasets['spaces']['PAN65'].dropna().unique().tolist())
+good_space_types = ['Cemetery', 'Churchyards', 'Civic space', 'Green Corridors', 'Institutions', 
+    'Other semi-natural greenspace', 'Public Parks & Gardens', 'Residential', 'Semi-natural Park']
+max_len = datasets['spaces'].shape[0]
+datasets['spaces'] = datasets['spaces'][datasets['spaces']['PAN65'].isin(good_space_types)]
+new_len = datasets['spaces'].shape[0]
+
 print(f'Loaded {len(datasets["sites"])} sites with {len(datasets["buffers"])} buffer zones, ' + 
-      str(len(datasets["spaces"])) + f' open spaces, and {len(datasets["ccs"])} community centres.')
+    f'{str(new_len)}/{str(max_len)} green spaces with '
+    f'{len(good_space_types)}/{len(space_types)} classifications, and {len(datasets["ccs"])} community centres.')
 
 @app.route('/layer/<layer_name>')
 def get_layer(layer_name):
@@ -51,7 +61,7 @@ def get_site_details(des_ref):
 @app.route('/')
 def index():
     layer_order = ['sites', 'buffers', 'spaces', 'ccs']
-    return flask.render_template('index.html', layers = layer_order)
+    return flask.render_template('index.html', layers = layer_order, space_types = good_space_types)
 
 #debug
 #get_site_details('LB47863')

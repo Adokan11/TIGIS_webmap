@@ -1,5 +1,6 @@
-(b) revamp how search works (filters)
-(c) add filters for greenspace that are on the map (maybe ccs as well)
+(a) revamp how search works (filters) (green types)
+(b) colored sites
+(c) colored ccs
 (c) uni logo bottom left
 (d) when hovering site name shows up
 

@@ -75,12 +75,27 @@
     {% for layer in layers %}
     {% if layer == 'buffers' %}
     <label class = 'layer-indent' id = 'buffers-toggle'>
-    {% else %}
-    <label>
-    {% endif %}
         <input type = 'checkbox' checked onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
         <span class = 'layer-label' data-layer = '{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
     </label>
+    {% elif layer == 'spaces' %}
+    <label>
+        <input type = 'checkbox' checked onclick = 'toggleSpaces()' data-layer = '{{ layer }}'>
+        <span class = 'layer-label' data-layer = '{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
+    </label>
+    {% for space_type in space_types %}
+    <label class = 'layer-indent space-type' id = 'space-type-{{ loop.index }}'>
+        <input type = 'checkbox' checked onclick = 'toggleSpaceType("{{ space_type }}")' 
+               data-type = '{{ space_type }}'>
+        <span style = 'color: #117733; font-weight: bold;'>{{ space_type }}</span>
+    </label>
+    {% endfor %}
+    {% else %}
+    <label>
+        <input type = 'checkbox' checked onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
+        <span class = 'layer-label' data-layer = '{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
+    </label>
+    {% endif %}
     {% endfor %}
     <h3>Search Sites</h3>
     <input type = 'text' id = 'site-search' placeholder = 'Search by name'>
@@ -149,6 +164,9 @@
 
     // Store full layer data (to avoid refetching)
     const layersData = {}
+
+    // Track active space types
+    const activeSpaceTypes = new Set()
 
     // Sites-specific filter term
     let sitesFilter = ''
@@ -433,6 +451,16 @@
             }
         }
 
+        // Apply type filter for spaces
+        if (name === 'spaces' && activeSpaceTypes.size > 0) {
+            data = {
+                type: 'FeatureCollection',
+                features: data.features.filter(f => 
+                    activeSpaceTypes.has(f.properties.PAN65)
+                )
+            }
+        }
+
         // Get style from config
         const style = LAYER_CONFIG[name] || {color: '#3388ff'}
         
@@ -474,6 +502,76 @@
         }).addTo(map)
 
         activeLayers[name] = layer
+    }
+
+    /**
+     * Toggle spaces layer and all type sub-toggles
+     */
+    function toggleSpaces() {
+        const spacesCheckbox = document.querySelector('input[data-layer = "spaces"]')
+        const typeToggles = document.querySelectorAll('.space-type')
+        const typeCheckboxes = document.querySelectorAll('.space-type input')
+        
+        if (spacesCheckbox.checked) {
+            // Show type toggles
+            typeToggles.forEach(toggle => toggle.classList.add('visible'))
+            
+            // Load data if not already loaded
+            if (!layersData['spaces']) {
+                fetch('/layer/spaces')
+                    .then(r => r.json())
+                    .then(data => {
+                        layersData['spaces'] = data
+                        // Enable all types
+                        typeCheckboxes.forEach(cb => {
+                            cb.checked = true
+                            activeSpaceTypes.add(cb.dataset.type)
+                        })
+                        createLayer('spaces')
+                    })
+            } else {
+                // Enable all types
+                typeCheckboxes.forEach(cb => {
+                    cb.checked = true
+                    activeSpaceTypes.add(cb.dataset.type)
+                })
+                createLayer('spaces')
+            }
+        } else {
+            // Hide type toggles
+            typeToggles.forEach(toggle => toggle.classList.remove('visible'))
+            
+            // Remove layer and clear types
+            if (activeLayers['spaces']) {
+                map.removeLayer(activeLayers['spaces'])
+                delete activeLayers['spaces']
+            }
+            activeSpaceTypes.clear()
+            typeCheckboxes.forEach(cb => cb.checked = false)
+        }
+    }
+
+    /**
+     * Toggle individual space type
+     */
+    function toggleSpaceType(spaceType) {
+        const checkbox = document.querySelector(`input[data-type="${spaceType}"]`)
+        
+        if (checkbox.checked) {
+            activeSpaceTypes.add(spaceType)
+        } else {
+            activeSpaceTypes.delete(spaceType)
+        }
+        
+        // Recreate spaces layer with updated filter
+        if (activeLayers['spaces']) {
+            map.removeLayer(activeLayers['spaces'])
+            delete activeLayers['spaces']
+        }
+        
+        if (activeSpaceTypes.size > 0) {
+            createLayer('spaces')
+        }
     }
 
     /**
@@ -579,7 +677,11 @@
     document.querySelectorAll('input[type = "checkbox"]').forEach(cb => {
         const layerName = cb.dataset.layer
         if (LAYER_CONFIG[layerName]?.defaultOn) {
-            toggle(layerName)
+            if (layerName === 'spaces') {
+                toggleSpaces()
+            } else {
+                toggle(layerName)
+            }
         }
     })
 
