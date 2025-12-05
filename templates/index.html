@@ -102,6 +102,7 @@
         <input type = 'checkbox' checked onclick = 'toggleSpaces()' data-layer = '{{ layer }}'>
         <span class = 'layer-label' data-layer = '{{ layer }}'>{{ layer.replace('_', ' ') | title }}</span>
     </label>
+    <h4 style = 'margin-bottom: 5px; margin-top: 5px; display: none;' id = 'types-heading'>Types:</h4>
     {% for space_type in space_types %}
     <label class = 'layer-indent space-type' id = 'space-type-{{ loop.index }}'>
         <input type = 'checkbox' checked onclick = 'toggleSpaceType("{{ space_type }}")' 
@@ -142,6 +143,19 @@
             <label for = 'score-max' style = 'font-weight: normal;'>Max: <span id = 'max-value'>1.00</span></label>
             <input type = 'range' id = 'score-max' min = '0' max = '1' step = '0.01' value = '1' 
                    style = 'width: 100%; cursor: pointer;' oninput = 'updateScoreFilter()'>
+        </div>
+    </div>
+        <h5 style = 'margin-bottom: 5px;'>Buffer's Population</h5>
+    <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
+        <div style = 'flex: 1;'>
+            <label for = 'pop-min' style = 'font-weight: normal;'>Min: <span id = 'pop-min-value'>0</span></label>
+            <input type = 'range' id = 'pop-min' min = '0' max = '30000' step = '200' value = '0' 
+                   style = 'width: 100%; cursor: pointer;' oninput = 'updatePopulationFilter()'>
+        </div>
+        <div style = 'flex: 1;'>
+            <label for = 'pop-max' style = 'font-weight: normal;'>Max: <span id = 'pop-max-value'>30000</span></label>
+            <input type = 'range' id = 'pop-max' min = '0' max = '30000' step = '200' value = '30000' 
+                   style = 'width: 100%; cursor: pointer;' oninput = 'updatePopulationFilter()'>
         </div>
     </div>
     <button onclick = 'resetScoreFilter()' style = 'background: #aaa; margin-bottom: 15px;'>Reset Filters</button>
@@ -235,6 +249,51 @@
 
     // Store plasma colormap
     let plasmaData = null
+
+    // Population range filter
+    let populationMin = 0
+    let populationMax = 30000
+    
+    // Create a map of site DES_REF to buffer population for quick lookup
+    let siteBufferPopulation = {}
+
+        /**
+     * Update population filter values and refresh sites layer
+     */
+    function updatePopulationFilter() {
+        populationMin = parseFloat(document.getElementById('pop-min').value)
+        populationMax = parseFloat(document.getElementById('pop-max').value)
+        
+        // Ensure min doesn't exceed max and vice versa
+        if (populationMin > populationMax) {
+            [populationMin, populationMax] = [populationMax, populationMin]
+            document.getElementById('pop-min').value = populationMin
+            document.getElementById('pop-max').value = populationMax
+        }
+        
+        document.getElementById('pop-min-value').textContent = populationMin.toLocaleString()
+        document.getElementById('pop-max-value').textContent = populationMax.toLocaleString()
+        
+        // Refresh sites layer if active
+        if (activeLayers['sites']) {
+            map.removeLayer(activeLayers['sites'])
+            delete activeLayers['sites']
+            createLayer('sites')
+        }
+    }
+
+    /**
+     * Build lookup map of site to buffer population
+     */
+    function buildBufferPopulationMap() {
+        if (layersData['buffers']) {
+            layersData['buffers'].features.forEach(feature => {
+                const desRef = feature.properties.DES_REF
+                const population = feature.properties.Population || 0
+                siteBufferPopulation[desRef] = population
+            })
+        }
+    }
 
     /**
      * Get color based on site rank (1-65)
@@ -553,15 +612,18 @@
         let data = layersData[name]
 
         // Apply filter for sites layer if set
-        if (name === 'sites' && (sitesFilterScore || scoreMin > 0 || scoreMax < 100)) {
+        if (name === 'sites' && (sitesFilter || scoreMin > 0 || scoreMax < 1 || populationMin > 0 || populationMax < 30000)) {
             data = {
                 type: 'FeatureCollection',
                 features: data.features.filter(f => {
-                    const matchesName = !sitesFilterScore || 
-                        f.properties.ENT_TITLE.toLowerCase().includes(sitesFilterScore.toLowerCase())
+                    const matchesSearch = !sitesFilter || 
+                        f.properties.ENT_TITLE.toLowerCase().includes(sitesFilter.toLowerCase()) ||
+                        f.properties.DES_REF.toLowerCase().includes(sitesFilter.toLowerCase())
                     const matchesScore = (f.properties.FINAL_SCORE >= scoreMin) && 
                         (f.properties.FINAL_SCORE <= scoreMax)
-                    return matchesName && matchesScore
+                    const bufferPop = siteBufferPopulation[f.properties.DES_REF] || 0
+                    const matchesPopulation = (bufferPop >= populationMin) && (bufferPop <= populationMax)
+                    return matchesSearch && matchesScore && matchesPopulation
                 })
             }
         }
@@ -595,13 +657,18 @@
         const layer = L.geoJSON(data, {
             style: style,
             pointToLayer: (feature, latlng) => {
-                if (name === 'sites' || name === 'ccs') {
+                if (name === 'sites') {
                     const siteStyle = rankColoringEnabled ? 
                         {...LAYER_CONFIG.sites, fillColor: getRankColor(feature.properties.RANK)} :
                         LAYER_CONFIG.sites
                     
                     return L.circleMarker(latlng, {
                         ...siteStyle,
+                        pane: 'sitesPane'
+                    })
+                } else if (name === 'ccs') {
+                    return L.circleMarker(latlng, {
+                        ...LAYER_CONFIG.ccs,
                         pane: 'sitesPane'
                     })
                 }
@@ -642,9 +709,11 @@
         const spacesCheckbox = document.querySelector('input[data-layer = "spaces"]')
         const typeToggles = document.querySelectorAll('.space-type')
         const typeCheckboxes = document.querySelectorAll('.space-type input')
+        const typesHeading = document.getElementById('types-heading')
         
         if (spacesCheckbox.checked) {
-            // Show type toggles
+            // Show type toggles and heading
+            typesHeading.style.display = 'block'
             typeToggles.forEach(toggle => toggle.classList.add('visible'))
             
             // Load data if not already loaded
@@ -669,7 +738,8 @@
                 createLayer('spaces')
             }
         } else {
-            // Hide type toggles
+            // Hide type toggles and heading
+            typesHeading.style.display = 'none'
             typeToggles.forEach(toggle => toggle.classList.remove('visible'))
             
             // Remove layer and clear types
@@ -747,6 +817,9 @@
                     .then(r => r.json())
                     .then(data => {
                         layersData[name] = data
+                        if (name === 'buffers') {
+                            buildBufferPopulationMap()
+                        }
                         createLayer(name)
                     })
             } else {
@@ -764,7 +837,7 @@
             if (activeLayers['sites']) {
                 buffersToggle.classList.add('visible')
                 rankToggle.style.display = 'block'
-                rankColorbar.style.display = 'block'
+                rankColorbar.style.display = rankColoringEnabled ? 'block' : 'none'
             } else {
                 buffersToggle.classList.remove('visible')
                 rankToggle.style.display = 'none'
@@ -807,7 +880,7 @@
     }
 
     /**
-     * Reset score filter to full range
+     * Reset all filters to default ranges
      */
     function resetScoreFilter() {
         document.getElementById('score-min').value = 0
@@ -816,6 +889,13 @@
         scoreMax = 1
         document.getElementById('min-value').textContent = '0.00'
         document.getElementById('max-value').textContent = '1.00'
+        
+        document.getElementById('pop-min').value = 0
+        document.getElementById('pop-max').value = 30000
+        populationMin = 0
+        populationMax = 30000
+        document.getElementById('pop-min-value').textContent = '0'
+        document.getElementById('pop-max-value').textContent = '30,000'
         
         if (activeLayers['sites']) {
             map.removeLayer(activeLayers['sites'])
@@ -869,11 +949,22 @@
         if (LAYER_CONFIG[layerName]?.defaultOn) {
             if (layerName === 'spaces') {
                 toggleSpaces()
+            } else if (layerName === 'buffers') {
+                toggle(layerName)
             } else {
                 toggle(layerName)
             }
         }
     })
+
+    // Build buffer population map after buffers are loaded
+    fetch('/layer/buffers')
+        .then(r => r.json())
+        .then(data => {
+            layersData['buffers'] = data
+            buildBufferPopulationMap()
+        })
+        .catch(err => console.error('Error loading buffers:', err))
 
     // Show sub toggle if sites is initially on
     if (LAYER_CONFIG['sites']?.defaultOn) {

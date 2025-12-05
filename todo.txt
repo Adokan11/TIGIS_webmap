@@ -1,6 +1,7 @@
-(b) revamp how search works (filters) (green types)
+(b) green types filter button
 (c) colored ccs
 (c) uni logo bottom left
+(c) search by ref as well
 (d) when hovering site name shows up
 
 line between site and its CC?
