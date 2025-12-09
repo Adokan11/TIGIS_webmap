@@ -44,6 +44,7 @@ const MAP_CONFIG = {
 
 // Global state
 const state = {
+    layerNames: Object.keys(LAYER_CONFIG),
     activeLayers: {},
     layersData: {},
     activeSpaceTypes: new Set(),
@@ -66,40 +67,26 @@ const state = {
 let map;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    loadPlasmaColormap();
     loadInitialData();
     setupEventListeners();
+    initMap();
 });
 
-function initMap() {
-    map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
-    map.zoomControl.setPosition('topright');
-    
-    L.tileLayer(MAP_CONFIG.tileLayer, {
-        attribution: MAP_CONFIG.attribution
-    }).addTo(map);
-    
-    map.createPane('sitesPane');
-    map.getPane('sitesPane').style.zIndex = 650;
-}
-
-function loadPlasmaColormap() {
-    fetch('/plasma')
-        .then(r => r.json())
-        .then(data => {
-            state.plasmaData = data;
-            generateRankColorbar();
-        });
-}
-
 function loadInitialData() {
-    fetch('/layer/buffers')
-        .then(r => r.json())
-        .then(data => {
-            state.layersData.buffers = data;
-            buildBufferPopulationMap();
-        });
+    // for each layer
+    const promises = state.layerNames.map(layerName =>
+        fetch(`/layer/${layerName}`)
+            .then(r => r.json())
+            .then(data => {
+                // Store the data under its layer name
+                state.layersData[layerName] = data;
+            })
+    );
+
+    // for pop filter
+    Promise.all(promises).then(() => {
+        buildBufferPopulationMap();
+    });
 }
 
 function setupEventListeners() {
@@ -115,7 +102,7 @@ function setupEventListeners() {
     });
     
     // Initialize layers based on defaultOn config
-    Object.keys(LAYER_CONFIG).forEach(layerName => {
+    state.layerNames.forEach(layerName => {
         const config = LAYER_CONFIG[layerName];
         const checkbox = document.querySelector(`input[data-layer="${layerName}"]`);
         
@@ -125,15 +112,7 @@ function setupEventListeners() {
         checkbox.checked = config.defaultOn;
         
         // Load and create layer if it should be on
-        if (config.defaultOn) {
-            if (layerName === 'spaces') {
-                toggleSpaces();
-            } else if (layerName === 'sites') {
-                toggle('sites');
-            } else {
-                toggle(layerName);
-            }
-        }
+        if (config.defaultOn) {toggle(layerName)}
     });
     
     // Handle sites layer special UI
@@ -141,21 +120,61 @@ function setupEventListeners() {
         document.getElementById('buffers-toggle').classList.add('visible');
         document.getElementById('rank-coloring-toggle').style.display = 'block';
     }
+
+    const searchInput = document.getElementById('site-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            applySiteSearch(searchInput.value);
+        });
+
+        // Optional: also trigger search when pressing Enter
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applySiteSearch(searchInput.value);
+            }
+        });
+    }
+}
+
+function initMap() {
+    map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+    map.zoomControl.setPosition('topright');
+    
+    L.tileLayer(MAP_CONFIG.tileLayer, {
+        attribution: MAP_CONFIG.attribution
+    }).addTo(map);
+    
+    map.createPane('sitesPane');
+    map.getPane('sitesPane').style.zIndex = 650;
+
+    const tooltipPane = map.getPane('tooltipPane');
+    if (tooltipPane) {
+        tooltipPane.style.zIndex = 700;
+    }
+
+    fetch('/plasma')
+        .then(r => r.json())
+        .then(data => {
+            state.plasmaData = data;
+            generateRankColorbar();
+        });
 }
 
 function toggle(name) {
+    console.log('toggling', name)
     if (state.activeLayers[name]) {
         map.removeLayer(state.activeLayers[name]);
         delete state.activeLayers[name];
     } else {
+        console.log('name not active', state.layersData[name])
         if (!state.layersData[name]) {
+            console.log('name not there', state.layersData[name])
             fetch(`/layer/${name}`)
                 .then(r => r.json())
                 .then(data => {
                     state.layersData[name] = data;
-                    if (name === 'buffers') {
-                        buildBufferPopulationMap();
-                    }
+                    console.log('created', state.layersData[name]);
                     createLayer(name);
                 });
         } else {
@@ -166,29 +185,9 @@ function toggle(name) {
     if (name === 'sites') {
         handleSitesToggle();
     }
-}
 
-function handleSitesToggle() {
-    const buffersToggle = document.getElementById('buffers-toggle');
-    const rankToggle = document.getElementById('rank-coloring-toggle');
-    const rankColorbar = document.getElementById('rank-colorbar-container');
-    
-    if (state.activeLayers['sites']) {
-        buffersToggle.classList.add('visible');
-        rankToggle.style.display = 'block';
-        rankColorbar.style.display = state.rankColoringEnabled ? 'block' : 'none';
-    } else {
-        buffersToggle.classList.remove('visible');
-        rankToggle.style.display = 'none';
-        rankColorbar.style.display = 'none';
-        state.rankColoringEnabled = false;
-        document.getElementById('rank-coloring-checkbox').checked = false;
-        
-        if (state.activeLayers['buffers']) {
-            document.querySelector('input[data-layer = "buffers"]').checked = false;
-            map.removeLayer(state.activeLayers['buffers']);
-            delete state.activeLayers['buffers'];
-        }
+    if (name === 'spaces') {
+        handleSpacesToggle();
     }
 }
 
@@ -230,9 +229,72 @@ function createPointMarker(feature, latlng, name) {
     return L.marker(latlng);
 }
 
-function toggleSpaceTypeFilter() {
-    state.useSpaceTypeFilter = document.getElementById('use-space-filter').checked;
-    refreshSitesLayer();
+function addFeatureInteractivity(feature, layer, layerName, hoveroff = true) {
+    const style = LAYER_CONFIG[layerName];
+    
+    if (layerName === 'sites') {
+        const name = feature.properties.ENT_TITLE;
+        layer.bindTooltip(name, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -5],
+            className: 'site-tooltip'
+        });
+        layer.on('click', () => selectSite(feature.properties.DES_REF, layer));
+        layer.on('mouseover', function() {
+            if (state.selectedSiteLayer !== this) {
+                this.setStyle({ fillOpacity: 1 });
+            }
+        });
+        layer.on('mouseout', function() {
+            if (state.selectedSiteLayer !== this) {
+                this.setStyle({ fillOpacity: style.fillOpacity });
+            }
+        });
+    } else {
+        const hoverOpacity = layerName === 'ccs' ? 1 : 0.4;
+        layer.on('mouseover', function() {
+            this.setStyle({ fillOpacity: hoverOpacity });
+        });
+        if (hoveroff) {
+        layer.on('mouseout', function() {
+            this.setStyle({ fillOpacity: style.fillOpacity });
+        })};
+        
+        const popupContent = infoPopup(feature.properties)[layerName]
+        layer.bindPopup(popupContent ? popupContent : '<p>No details</p>');
+        layer.on('popupopen', (e) => {
+            const el = e.popup.getElement();
+            if (el) {
+                el.style.border = `4px solid ${style.color}`;
+                el.style.borderRadius = '15px';
+            }
+        });
+    }
+}
+
+function handleSitesToggle() {
+    const buffersToggle = document.getElementById('buffers-toggle');
+    const rankToggle = document.getElementById('rank-coloring-toggle');
+    const rankColorbar = document.getElementById('rank-colorbar-container');
+    
+    if (state.activeLayers['sites']) {
+        buffersToggle.classList.add('visible');
+        rankToggle.style.display = 'block';
+        rankColorbar.style.display = state.rankColoringEnabled ? 'block' : 'none';
+    } else {
+        buffersToggle.classList.remove('visible');
+        rankToggle.style.display = 'none';
+        rankColorbar.style.display = 'none';
+        state.rankColoringEnabled = false;
+        document.getElementById('rank-coloring-checkbox').checked = false;
+        
+        if (state.activeLayers['buffers']) {
+            document.querySelector('input[data-layer = "buffers"]').checked = false;
+            map.removeLayer(state.activeLayers['buffers']);
+            delete state.activeLayers['buffers'];
+        }
+    }
 }
 
 function filterSitesData(data) {
@@ -258,7 +320,7 @@ function filterSitesData(data) {
             if (state.useSpaceTypeFilter && state.activeSpaceTypes.size > 0) {
                 const closestOsId = Number(f.properties.CLOSEST_OS_ID);
                 
-                const matchingSpace = state.layersData['spaces']?.features?.find(space => {
+                const matchingSpace = state.layersData.spaces?.features?.find(space => {
                     const spaceId = Number(space.properties.OBJECTID_1);
                     return spaceId === closestOsId;
                 });
@@ -272,7 +334,7 @@ function filterSitesData(data) {
     };
 }
 
-function toggleSpaces() {
+function handleSpacesToggle() {
     const spacesCheckbox = document.querySelector('input[data-layer="spaces"]');
     const typeToggles = document.querySelectorAll('.space-type');
     const typeCheckboxes = document.querySelectorAll('.space-type input');
@@ -281,25 +343,11 @@ function toggleSpaces() {
     if (spacesCheckbox.checked) {
         typesHeading.style.display = 'block';
         typeToggles.forEach(toggle => toggle.classList.add('visible'));
-        
-        if (!state.layersData['spaces']) {
-            fetch('/layer/spaces')
-                .then(r => r.json())
-                .then(data => {
-                    state.layersData['spaces'] = data;
-                    typeCheckboxes.forEach(cb => {
-                        cb.checked = true;
-                        state.activeSpaceTypes.add(cb.dataset.type);
-                    });
-                    createLayer('spaces');
-                });
-        } else {
-            typeCheckboxes.forEach(cb => {
+        typeCheckboxes.forEach(cb => {
                 cb.checked = true;
                 state.activeSpaceTypes.add(cb.dataset.type);
-            });
-            createLayer('spaces');
-        }
+
+        })
     } else {
         typesHeading.style.display = 'none';
         typeToggles.forEach(toggle => toggle.classList.remove('visible'));
@@ -310,6 +358,14 @@ function toggleSpaces() {
         }
         state.activeSpaceTypes.clear();
         typeCheckboxes.forEach(cb => cb.checked = false);
+
+        state.useSpaceTypeFilter = false;
+        const useFilterCheckbox = document.getElementById('use-space-filter');
+        if (useFilterCheckbox) {
+            useFilterCheckbox.checked = false;
+        }
+
+        refreshSitesLayer();
     }
 }
 
@@ -337,9 +393,14 @@ function toggleSpaceType(spaceType) {
     }
 }
 
+function toggleSpaceTypeFilter() {
+    state.useSpaceTypeFilter = document.getElementById('use-space-filter').checked;
+    refreshSitesLayer();
+}
+
 function buildBufferPopulationMap() {
-    if (state.layersData['buffers']) {
-        state.layersData['buffers'].features.forEach(feature => {
+    if (state.layersData.buffers) {
+        state.layersData.buffers.features.forEach(feature => {
             const desRef = feature.properties.DES_REF;
             const population = feature.properties.Population || 0;
             state.siteBufferPopulation[desRef] = population;
@@ -347,43 +408,7 @@ function buildBufferPopulationMap() {
     }
 }
 
-function addFeatureInteractivity(feature, layer, layerName) {
-    const style = LAYER_CONFIG[layerName];
-    
-    if (layerName === 'sites') {
-        layer.on('click', () => selectSite(feature.properties.DES_REF, layer));
-        layer.on('mouseover', function() {
-            if (state.selectedSiteLayer !== this) {
-                this.setStyle({ fillOpacity: 1 });
-            }
-        });
-        layer.on('mouseout', function() {
-            if (state.selectedSiteLayer !== this) {
-                this.setStyle({ fillOpacity: style.fillOpacity });
-            }
-        });
-    } else {
-        const hoverOpacity = layerName === 'ccs' ? 1 : 0.4;
-        layer.on('mouseover', function() {
-            this.setStyle({ fillOpacity: hoverOpacity });
-        });
-        layer.on('mouseout', function() {
-            this.setStyle({ fillOpacity: style.fillOpacity });
-        });
-        
-        const popupContent = infoPopup(feature.properties, layerName);
-        layer.bindPopup(popupContent);
-        layer.on('popupopen', (e) => {
-            const el = e.popup.getElement();
-            if (el) {
-                el.style.border = `4px solid ${style.color}`;
-                el.style.borderRadius = '15px';
-            }
-        });
-    }
-}
-
-function infoPopup(properties, layerName) {
+function infoPopup(properties) {
     const popupTemplates = {
         buffers: () => `
             <h3>Buffer of: ${properties.ENT_TITLE}</h3>
@@ -403,7 +428,7 @@ function infoPopup(properties, layerName) {
         `
     };
     
-    return popupTemplates[layerName] ? popupTemplates[layerName]() : '<p>No details</p>';
+    return popupTemplates;
 }
 
 function toggleRankColoring() {
@@ -456,18 +481,7 @@ function selectSite(desRef, layer) {
     
     state.selectedSite = desRef;
     
-    const requiredLayers = ['buffers', 'spaces', 'ccs'];
-    const loadPromises = requiredLayers.map(layerName => {
-        if (!state.layersData[layerName]) {
-            return fetch(`/layer/${layerName}`)
-                .then(r => r.json())
-                .then(data => { state.layersData[layerName] = data; });
-        }
-        return Promise.resolve();
-    });
-    
-    Promise.all(loadPromises)
-        .then(() => fetch(`/site_details/${desRef}`))
+    fetch(`/site_details/${desRef}`)
         .then(r => r.json())
         .then(data => {
             displaySiteDetails(data);
@@ -679,30 +693,23 @@ function resetScoreFilter() {
     refreshSitesLayer();
 }
 
-function searchSites() {
-    state.sitesFilter = document.getElementById('site-search').value;
+function applySiteSearch(term) {
+    state.sitesFilter = term || '';
     const sitesCheckbox = document.querySelector('input[data-layer="sites"]');
     
+    if (sitesCheckbox) {sitesCheckbox.checked = true;}
+
+    // Remove current sites layer if present
     if (state.activeLayers['sites']) {
         map.removeLayer(state.activeLayers['sites']);
         delete state.activeLayers['sites'];
     }
-    
-    const loadAndCreate = () => {
-        createLayer('sites');
-        sitesCheckbox.checked = true;
-    };
-    
-    if (state.layersData['sites']) {
-        loadAndCreate();
-    } else {
-        fetch('/layer/sites')
-            .then(r => r.json())
-            .then(data => {
-                state.layersData['sites'] = data;
-                loadAndCreate();
-            });
-    }
+    createLayer('sites');
+}
+
+function searchSites() {
+    const term = document.getElementById('site-search').value;
+    applySiteSearch(term);
 }
 
 function refreshSitesLayer() {

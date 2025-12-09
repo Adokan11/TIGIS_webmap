@@ -1,5 +1,2 @@
 (B) uni logo bottom left
-(D) when hovering site name shows up
-(C) when site is selceted hover defills selected cc @bug
-(C) search button divided into two: one to clear search
 (E) line between site and its CC?

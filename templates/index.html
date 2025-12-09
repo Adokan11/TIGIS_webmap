@@ -11,7 +11,7 @@
     <!-- Layer Controls -->
     <div class = 'controls'>
         <h2>Retrofitting Historical Sites for Community Use</h2>
-        <p><strong>Exploring the Synergy Between Edinburgh’s Historic Listed Buildings and Greenspaces</strong></p>
+        <p style = 'color:#444;'><strong>Exploring the Synergy Between Edinburgh’s Historic Listed Buildings and Greenspaces</strong></p>
 
     <p>
         This platform identifies C-listed buildings located within or near Edinburgh's greenspaces 
@@ -37,7 +37,7 @@
                     </label>
                     {% elif layer == 'spaces' %}
                     <label>
-                        <input type = 'checkbox' onclick = 'toggleSpaces()' data-layer = '{{ layer }}'>
+                        <input type = 'checkbox' onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
                         <span class = 'layer-label' data-layer = '{{ layer }}'></span>
                     </label>
                     <h4 style = 'margin-bottom: 5px; margin-top: 5px; display: none;' id = 'types-heading'>Types:</h4>
@@ -72,7 +72,8 @@
         
         <section>
             <h3>Find Sites</h3>
-            <h4 style = 'margin-bottom: 10px'>Filters</h4>
+            <input type = 'text' id = 'site-search' placeholder = 'Search by name or reference...'>
+            <h4 style = 'margin-bottom: 10px; margin-top: 10px'>Site Filters</h4>
 
             <label style = 'margin-bottom: 10px;'>
                 <input type = 'checkbox' id = 'use-space-filter' onchange = 'toggleSpaceTypeFilter()'>
@@ -115,10 +116,7 @@
                 </div>
             </div>
 
-            <button onclick = 'resetScoreFilter()' class = 'secondary'>Reset Filters</button>
-            <br></br>
-            <input type = 'text' id = 'site-search' placeholder = 'Search by name or reference...'>
-            <button onclick = 'searchSites()'>Search</button>
+            <button onclick = 'resetScoreFilter()'>Reset Site Filters</button>
         </section>
     </div>
     
