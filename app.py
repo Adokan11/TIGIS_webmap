@@ -76,6 +76,11 @@ def index():
     layer_order = ['sites', 'buffers', 'spaces', 'ccs']
     return flask.render_template('index.html', layers = layer_order, space_types = good_space_types)
 
+@app.route("/info_overview")
+def info_overview():
+    return flask.render_template("info_overview.html")
+
+
 #debug
 #get_site_details('LB47863')
 #for i in datasets['sites']['DES_REF']:

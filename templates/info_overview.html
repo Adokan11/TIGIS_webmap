@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TIGIS – Project Information</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+</head>
+
+<body class="info_page">
+
+    <!-- Fixed Back-to-Map button -->
+    <a href="{{ url_for('index') }}" class="info_back_link fixed_back_link">
+        ← Back to map
+    </a>
+
+    <div class="info_container">
+
+        <header class="info_header">
+            <h1>TIGIS – Project Information</h1>
+            <p class="info_tagline">
+                Overview of processing steps, and methodology of the webmap's results.
+            </p>
+        </header>
+
+        <main class="info_main">
+
+            <section class="info_section">
+                <h2>1. Project Context</h2>
+                <p>
+                    The aim of this project is to identify which historic buildings in Edinburgh’s greenspace would 
+                    be most suitable to retrofit for community use. Community centres in greenspaces address 
+                    environmental deprivation by providing accessible social infrastructure where people 
+                    experience nature, reducing isolation in areas lacking quality environmental amenities.
+                    However, their benefits are often overlooked in community and heritage schemes. Therefore, 
+                    we aim to examine the value of Edinburgh’s greenspaces by assessing their potential to serve 
+                    as community hubs while preserving and enhancing their historic and cultural significance.
+
+                </p>
+            </section>
+
+            <section class="info_section">
+                <h2>2. Analytical Hierarchy Processing Steps</h2>
+                <p>
+                    To develop the weighting and prioritisation rubric for scoring sites, we applied the Analytical 
+                    Hierarchy Process (AHP) using the criteria from 4.2. Information from our literature review, as 
+                    well as our own judgments and evaluations were used to complete the AHP. The results are 
+                    shown below:
+                </p>
+
+                <table class="info_table ahp_table">
+        <thead>
+            <tr>
+                <th>Criteria</th>
+                <th>Accessibility</th>
+                <th>Deprivation</th>
+                <th>Greenspace Type</th>
+                <th>Proximity</th>
+                <th>Row Sum</th>
+                <th>Weight</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>Accessibility</th>
+                <td>1</td>
+                <td>1/3</td>
+                <td>5</td>
+                <td>1</td>
+                <td>7.333</td>
+                <td>0.26</td>
+            </tr>
+            <tr>
+                <th>Deprivation</th>
+                <td>3</td>
+                <td>1</td>
+                <td>6</td>
+                <td>3</td>
+                <td>13</td>
+                <td>0.46</td>
+            </tr>
+            <tr>
+                <th>Greenspace Type</th>
+                <td>1/5</td>
+                <td>1/6</td>
+                <td>1</td>
+                <td>1/4</td>
+                <td>1.617</td>
+                <td>0.06</td>
+            </tr>
+            <tr>
+                <th>Proximity</th>
+                <td>1</td>
+                <td>1/3</td>
+                <td>4</td>
+                <td>1</td>
+                <td>6.333</td>
+                <td>0.22</td>
+            </tr>
+        </tbody>
+        <caption>
+            Table 1: AHP pairwise comparison matrix. Consistency score = 0.04.
+        </caption>
+    </table>
+
+
+
+
+            </section>
+
+            <section class="info_section">
+    <h2>3. Interpreting the Map</h2>
+
+    <p>
+        The TIGIS webmap combines several spatial layers and interactive tools to help users explore 
+        historic sites, nearest green spaces and community centres across Edinburgh. The guidance 
+        below explains how to interpret the visualisation and the indicators shown on the map.
+    </p>
+
+    <div class="interpret_grid">
+        <div class="interpret_card">
+            <h3>3.1 Layers</h3>
+            <p>
+                The map includes five main layers:
+            </p>
+            <ul>
+                <li><strong>Sites:</strong> Candidate locations for suitability. Each site contains
+                    attributes such as proximity to community centres, buffer zone, SIMD rank and 
+                    nearest green space.</li>
+                <li><strong>Buffers:</strong> Circular catchments representing a site’s effective service area.
+                    Buffer population counts are used as part of the suitability scoring.</li>
+                <li><strong>Green Spaces:</strong> Greenspace polygons classified into several categories
+                    (e.g., park, play area, natural space). These are used both as map context and as part of
+                    the Greenspace Type criterion.</li>
+                <li><strong>Community Centres:</strong> Point locations representing community facilities used in
+                    the proximity analysis.</li>
+                <li><strong>SIMD Ranks:</strong> SIMD (Scottish Index of Multiple Deprivation) ranks are included 
+                    to show how deprivation varies across Edinburgh. Lower ranks represent more deprived areas.</li>
+            </ul>
+        </div>
+
+        <div class="interpret_card">
+            <h3>3.2 Colour Schemes</h3>
+            <p>
+                Site markers can be coloured according to their final ranking. When the
+                Colour by Rank option is enabled, lower ranking sites appear in darker colours while
+                higher ranking sites appear in lighter tones. This helps users quickly identify the most 
+                suitable locations.
+            </p>
+        </div>
+
+        <div class="interpret_card">
+            <h3>3.3 Filters</h3>
+            <p>
+                Several filters allow users to refine which sites are displayed:
+            </p>
+            <ul>
+                <li><strong>Final Score Range:</strong> Adjust the minimum and maximum AHP score to view only
+                    sites within a chosen suitability band.</li>
+                <li><strong>Buffer Population:</strong> Limit sites to those serving a minimum or maximum
+                    population within their buffer catchment.</li>
+                <li><strong>Community Centre Distance:</strong> Show sites that fall within a specific distance
+                    range from a community centre.</li>
+                <li><strong>Greenspace Type Filter:</strong> Display only sites associated with selected
+                    types of greenspaces.</li>
+            </ul>
+        </div>
+
+        <div class="interpret_card">
+            <h3>3.4 Searching</h3>
+            <p>
+                The search function allows users to locate specific sites by name or reference code.
+                When a site is selected from the search, the map zooms to its location and displays the
+                full attribute panel for closer inspection.
+            </p>
+        </div>
+
+        <div class="interpret_card">
+            <h3>3.5 Interaction Tools</h3>
+            <p>
+                Clicking on a site opens a detailed information panel showing:
+            </p>
+            <ul>
+                <li>Final suitability score and contributing criteria values</li>
+                <li>Population within the buffer zone</li>
+                <li>Distance to nearest community centre</li>
+                <li>Associated greenspace type</li>
+            </ul>
+    
+        </div>
+    </div>
+</section>
+
+
+        </main>
+
+    </div>
+
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+    const cards = document.querySelectorAll(".interpret_card");
+
+    cards.forEach(card => {
+        card.addEventListener("mouseenter", () => {
+            // fade all others
+            cards.forEach(c => {
+                c.style.opacity = (c === card) ? "1" : "0.4";
+            });
+        });
+
+        card.addEventListener("mouseleave", () => {
+            // reset all cards
+            cards.forEach(c => {
+                c.style.opacity = "1";
+            });
+        });
+    });
+});
+</script>
+
+
+</body>
+</html>

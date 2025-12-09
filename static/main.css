@@ -21,18 +21,42 @@ html, body {
     background: #f5f5f5;
     padding: 15px;
     box-shadow: 0 0 15px #00000040;
+    border-right: 1px solid #ddd;
     width: 280px;
     overflow-y: auto;
 }
 
+
 .controls h2 {
-    margin: 0 0 8px 0;
+    margin-bottom: 12px;
 }
 
+
 .controls h3 {
-    margin: 15px 0 10px 0;
+    margin-top: 20px;
+    margin-bottom: 10px;
     font-size: 16px;
+    color:#444;
+    font-weight: 600;
 }
+
+.controls h5 {
+    margin: 10px 0 5px 0;
+    font-size: 14px;
+    font-weight: bold;
+    color: #555;
+}
+
+.controls input[type='range'] {
+    width: 100%;
+}
+
+.controls label {
+    font-weight: normal;
+    margin-bottom: 4px;
+    color: #444;
+}
+
 
 .controls button {
     width: 100%;
@@ -58,6 +82,14 @@ html, body {
     background: #999;
 }
 
+.controls input[type="checkbox"] {
+    transition: transform 0.1s ease;
+}
+
+.controls input[type="checkbox"]:hover {
+    transform: scale(1.1);
+}
+
 label {
     display: block;
     margin: 8px 0;
@@ -70,7 +102,7 @@ label input[type = 'checkbox'] {
 }
 
 .layer-indent {
-    margin-left: 20px;
+    margin-left: 0px;
     display: none;
 }
 
@@ -85,7 +117,7 @@ label input[type = 'checkbox'] {
 #site-search {
     width: 100%;
     padding: 8px;
-    margin-bottom: 8px;
+    margin: 10px 0;
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -195,4 +227,220 @@ input[type = 'range'] {
 
 .leaflet-popup-close-button:hover {
     color: #ff0000 !important;
+}
+
+
+/*info_overview css*/
+
+.fixed_back_link {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 2000;
+
+    background: rgba(255, 255, 255, 0.9);
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: #882255;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    border: 1px solid #d5bfd0;
+    box-shadow: 0 1px 4px #00000030;
+}
+
+.fixed_back_link:hover {
+    background: #f5e9f2;
+}
+
+/* Sidebar link in the webmap: Project Info */
+.info_link {
+    display: block;
+    width: 100%;
+    margin: 0 0 20px 0;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #882255;
+    font-weight: bold;
+    text-decoration: none;
+    text-align: center;
+    transition: 
+        background 0.2s ease,
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.info_link:hover {
+    background: #f5e6f0;         
+    transform: translateY(-2px); 
+    border-color: #882255;
+    box-shadow: 0 2px 6px #00000025;
+}
+
+
+
+
+body.info_page {
+    background-image: url("green_space.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    overflow-y: auto;
+    min-height: 100vh;
+}
+
+.info_container {
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 24px 28px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px #00000033;
+}
+
+.info_header {
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 18px;
+}
+
+.info_header h1 {
+    font-size: 24px;
+    margin: 0 0 4px 0;
+    color: #333;
+}
+
+.info_tagline {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.info_main {
+    line-height: 1.6;
+    color: #333;
+    font-size: 14px;
+}
+
+.info_section {
+    margin-bottom: 22px;
+}
+
+.info_section h2 {
+    font-size: 18px;
+    margin-bottom: 6px;
+    color: #444;
+    border-left: 4px solid #882255;
+    padding-left: 8px;
+}
+
+/* Table styling for info page (AHP and similar tables) */
+.info_table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 4px 0;
+    font-size: 13px;
+}
+
+.info_table th,
+.info_table td {
+    border: 1px solid #cccccc;
+    padding: 6px 8px;
+    text-align: center;
+}
+
+.info_table thead th {
+    background: #f2f2f2;
+    font-weight: bold;
+}
+
+
+.info_table th:first-child,
+.info_table td:first-child {
+    text-align: left;
+}
+
+
+.info_table th:nth-child(6),
+.info_table td:nth-child(6) {
+    background: #d9f2d9;
+}
+
+
+.info_table th:nth-child(7),
+.info_table td:nth-child(7) {
+    background: #b6e3b6;
+}
+
+
+.info_table caption {
+    caption-side: bottom;
+    font-size: 12px;
+    color: #555;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Layout for "Interpreting the Map" cards */
+.interpret_grid {
+    display: flex;
+    flex-direction: column;   /* stack cards vertically */
+    gap: 16px;
+    margin-top: 12px;
+}
+
+
+/* Interpreting the Map – Card Styling */
+.interpret_card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 4px #00000020;
+
+    cursor: pointer;
+
+    /* Smooth animation */
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+.interpret_card h3 {
+    margin-top: 0;
+    font-size: 15px;
+    color: #882255;
+    min-height: 24px;
+}
+
+.interpret_card p {
+    margin: 4px 0 6px 0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.interpret_card ul {
+    margin: 4px 0 0 18px;
+    padding-left: 0;
+}
+
+.interpret_card li {
+    margin-bottom: 3px;
+}
+
+/* Hover effect */
+.interpret_card:hover {
+    opacity: 1;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px #00000035;
+    background: rgba(255, 255, 255, 1);
+    border-color: #c8a3b9;
 }
