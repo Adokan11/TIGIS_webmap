@@ -72,13 +72,22 @@ def get_site_details(des_ref):
     return details
 
 @app.route('/')
-def index():
+def home():
+    # new landing page
+    return flask.render_template('home.html')
+
+
+@app.route('/map')
+def map_view():
+    # your existing webmap view
     layer_order = ['sites', 'buffers', 'spaces', 'ccs']
-    return flask.render_template('index.html', layers = layer_order, space_types = good_space_types)
+    return flask.render_template('index.html', layers=layer_order, space_types=good_space_types)
+
 
 @app.route("/info_overview")
 def info_overview():
     return flask.render_template("info_overview.html")
+
 
 
 #debug
