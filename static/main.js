@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadInitialData() {
     // for each layer
     const promises = state.layerNames.map(layerName =>
-        fetch(`/layer/${layerName}`)
+        fetch(`${BASE_PATH}/layer/${layerName}`)
             .then(r => r.json())
             .then(data => {
                 // Store the data under its layer name
@@ -153,7 +153,7 @@ function initMap() {
         tooltipPane.style.zIndex = 700;
     }
 
-    fetch('/plasma')
+    fetch(`${BASE_PATH}/plasma`)
         .then(r => r.json())
         .then(data => {
             state.plasmaData = data;
@@ -162,19 +162,15 @@ function initMap() {
 }
 
 function toggle(name) {
-    console.log('toggling', name)
     if (state.activeLayers[name]) {
         map.removeLayer(state.activeLayers[name]);
         delete state.activeLayers[name];
     } else {
-        console.log('name not active', state.layersData[name])
         if (!state.layersData[name]) {
-            console.log('name not there', state.layersData[name])
-            fetch(`/layer/${name}`)
+            fetch(`${BASE_PATH}/layer/${name}`)
                 .then(r => r.json())
                 .then(data => {
                     state.layersData[name] = data;
-                    console.log('created', state.layersData[name]);
                     createLayer(name);
                 });
         } else {
@@ -481,7 +477,7 @@ function selectSite(desRef, layer) {
     
     state.selectedSite = desRef;
     
-    fetch(`/site_details/${desRef}`)
+    fetch(`${BASE_PATH}/site_details/${desRef}`)
         .then(r => r.json())
         .then(data => {
             displaySiteDetails(data);

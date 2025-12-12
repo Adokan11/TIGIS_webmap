@@ -88,14 +88,6 @@ def map_view():
 def info_overview():
     return flask.render_template("info_overview.html")
 
-
-
-#debug
-#get_site_details('LB47863')
-#for i in datasets['sites']['DES_REF']:
-#    get_site_details(i)
-#print(datasets['spaces'].iloc[0])
-
 if __name__ == '__main__':
-    app.run(debug = True, port = 5005)
+    app.run()
     # should be on http://127.0.0.1:5005

@@ -1,0 +1,4 @@
+ssh devapps
+SCRIPT_NAME=/dev/cgsgroup5 gunicorn --bind 0.0.0.0:55432 app:app
+
+https://www.geos.ed.ac.uk/dev/cgsgroup5
