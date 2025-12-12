@@ -84,9 +84,9 @@ def map_view():
     return flask.render_template('map.html', layers=layer_order, space_types=good_space_types)
 
 
-@app.route("/info_overview")
+@app.route("/overview")
 def info_overview():
-    return flask.render_template("info_overview.html")
+    return flask.render_template("overview.html")
 
 if __name__ == '__main__':
     app.run()
