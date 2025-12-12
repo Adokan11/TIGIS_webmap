@@ -1,141 +1,34 @@
 <!DOCTYPE html>
-<html lang = 'en'>
+<html lang="en">
 <head>
-    <meta charset = 'UTF-8'>
-    <meta name = 'viewport' content = 'width = device-width, initial-scale = 1.0'>
-    <title>Retrofitting Historical Sites for Community Use </title>
-    <link rel = 'stylesheet' href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
-    <link rel = 'stylesheet' href = '{{ url_for("static", filename = "main.css") }}'>
+    <meta charset="UTF-8">
+    <title>TIGIS – Retrofitting Historic Sites</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
 </head>
-<body>
-    <!-- Layer Controls -->
-    <div class = 'controls'>
-        <h2>Retrofitting Historical Sites for Community Use</h2>
-        <p style = 'color:#444;'><strong>Exploring the Synergy Between Edinburgh’s Historic Listed Buildings and Greenspaces</strong></p>
+<body class="landing_page">
 
-    <p>
-        This platform identifies C-listed buildings located within or near Edinburgh's greenspaces 
-        that are candidates for retrofitting into community hubs.
-    </p>
-    
-    <p>For more information on the methodology, click below:</p>
+    <div class="landing_overlay">
+        <div class="landing_card">
+            <h1>Retrofitting Historical Sites for Community Use</h1>
+            <p class="landing_tagline">
+                Exploring the synergy between Edinburgh’s historic listed buildings and greenspaces.
+            </p>
+            <p class="landing_text">
+                This platform identifies C-listed buildings located within or near Edinburgh's greenspaces
+                that are candidates for retrofitting into community hubs, improving access to social and
+                environmental amenities.
+            </p>
 
-        <a href="{{ url_for('info_overview') }}" class="secondary info_link">
-        Project Info
-        <a href="{{ url_for('home') }}" class="secondary info_link">
-        Home
-        </a>
-
-        </a>
-
-        <p> </p>
-        
-        <section>
-            <h3>Layers</h3>
-            <div id = 'layer-controls'>
-                {% for layer in layers %}
-                    {% if layer == 'buffers' %}
-                    <label class = 'layer-indent' id = 'buffers-toggle'>
-                        <input type = 'checkbox' onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
-                        <span class = 'layer-label' data-layer = '{{ layer }}'></span>
-                    </label>
-                    {% elif layer == 'spaces' %}
-                    <label>
-                        <input type = 'checkbox' onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
-                        <span class = 'layer-label' data-layer = '{{ layer }}'></span>
-                    </label>
-                    <h4 style = 'margin-bottom: 5px; margin-top: 5px; display: none;' id = 'types-heading'>Types:</h4>
-                    {% for space_type in space_types %}
-                    <label class = 'layer-indent space-type'>
-                        <input type = 'checkbox' onclick = 'toggleSpaceType("{{ space_type }}")' data-type = '{{ space_type }}'>
-                        <span>{{ space_type }}</span>
-                    </label>
-                    {% endfor %}
-                    {% else %}
-                    <label>
-                        <input type = 'checkbox' onclick = 'toggle("{{ layer }}")' data-layer = '{{ layer }}'>
-                        <span class = 'layer-label' data-layer = '{{ layer }}'></span>
-                    </label>
-                    {% if layer == 'sites' %}
-                    <label class = 'layer-indent' id = 'rank-coloring-toggle' style = 'display: none;'>
-                        <input type = 'checkbox' id = 'rank-coloring-checkbox' onclick = 'toggleRankColoring()'>
-                        <span style = 'color: #882255; font-weight: bold;'>Color by Rank</span>
-                    </label>
-                    <div id = 'rank-colorbar-container' class = 'layer-indent' style = 'display: none; margin-bottom: 10px;'>
-                        <div class = 'rank-colorbar' id = 'rank-colorbar'></div>
-                        <div class = 'rank-legend'>
-                            <span>Worst (65)</span>
-                            <span>Best (1)</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% endif %}
-                {% endfor %}
+            <div class="landing_buttons">
+                <a href="{{ url_for('map_view') }}" class="landing_button primary">
+                    View Webmap
+                </a>
+                <a href="{{ url_for('info_overview') }}" class="landing_button secondary">
+                    Project Information
+                </a>
             </div>
-        </section>
-        
-        <section>
-            <h3>Find Sites</h3>
-            <input type = 'text' id = 'site-search' placeholder = 'Search by name or reference...'>
-            <h4 style = 'margin-bottom: 10px; margin-top: 10px'>Site Filters</h4>
-
-            <label style = 'margin-bottom: 10px;'>
-                <input type = 'checkbox' id = 'use-space-filter' onchange = 'toggleSpaceTypeFilter()'>
-                <span style = 'color: #117733; font-weight: bold; font-size: 14px;'>By Selected Green Space Types</span>
-            </label>
-            
-            <h5 style = 'margin-bottom: 5px; margin-top: 5px; color: #882255'>Final Score:</h5>
-            <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
-                <div style = 'flex: 1;'>
-                    <label for = 'score-min' style = 'font-weight: normal;'>Min: <span id = 'min-value'>0.00</span></label>
-                    <input type = 'range' id = 'score-min' min = '0' max = '1' step = '0.01' value = '0' oninput = 'updateScoreFilter()'>
-                </div>
-                <div style = 'flex: 1;'>
-                    <label for = 'score-max' style = 'font-weight: normal;'>Max: <span id = 'max-value'>1.00</span></label>
-                    <input type = 'range' id = 'score-max' min = '0' max = '1' step = '0.01' value = '1' oninput = 'updateScoreFilter()'>
-                </div>
-            </div>
-            
-            <h5 style = 'margin-bottom: 5px; margin-top: 5px; color: #332288'>Buffer's Population:</h5>
-            <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
-                <div style = 'flex: 1;'>
-                    <label for = 'pop-min' style = 'font-weight: normal;'>Min: <span id = 'pop-min-value'>0</span></label>
-                    <input type = 'range' id = 'pop-min' min = '0' max = '30000' step = '200' value = '0' oninput = 'updatePopulationFilter()'>
-                </div>
-                <div style = 'flex: 1;'>
-                    <label for = 'pop-max' style = 'font-weight: normal;'>Max: <span id = 'pop-max-value'>30000</span></label>
-                    <input type = 'range' id = 'pop-max' min = '0' max = '30000' step = '200' value = '30000' oninput = 'updatePopulationFilter()'>
-                </div>
-            </div>
-
-            <h5 style = 'margin-bottom: 5px; margin-top: 5px; color: #999933'>Community Centre Proximity:</h5>
-            <div style = 'display: flex; gap: 10px; margin-bottom: 10px;'>
-                <div style = 'flex: 1;'>
-                    <label for = 'cc-distance-min' style = 'font-weight: normal;'>Min: <span id = 'cc-distance-min-value'>0</span>m</label>
-                    <input type = 'range' id = 'cc-distance-min' min = '0' max = '5000' step = '100' value = '0' oninput = 'updateCCDistanceFilter()'>
-                </div>
-                <div style = 'flex: 1;'>
-                    <label for = 'cc-distance-max' style = 'font-weight: normal;'>Max: <span id = 'cc-distance-max-value'>5000</span>m</label>
-                    <input type = 'range' id = 'cc-distance-max' min = '0' max = '5000' step = '100' value = '5000' oninput = 'updateCCDistanceFilter()'>
-                </div>
-            </div>
-
-            <button onclick = 'resetScoreFilter()'>Reset Site Filters</button>
-        </section>
+        </div>
     </div>
-    
-    <!-- Site Details Panel -->
-    <div class = 'site-details' id = 'site-details'>
-        <span class = 'close-btn' onclick = 'clearSelection()'>&times;</span>
-        <div id = 'details-content'></div>
-    </div>
-    
-    <!-- Map -->
-    <div id = 'map'></div>
-    <script>
-        window.BASE_PATH = '{{ request.script_root }}';
-    </script>
-    <script src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
-    <script src = '{{ url_for("static", filename = "main.js") }}'></script>
+
 </body>
 </html>
