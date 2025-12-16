@@ -1,4 +1,7 @@
 ssh devapps
+screen -S flaskapp
 SCRIPT_NAME=/dev/cgsgroup5 gunicorn --bind 0.0.0.0:55432 app:app
+Ctrl+A, D 
+exit
 
 https://www.geos.ed.ac.uk/dev/cgsgroup5
