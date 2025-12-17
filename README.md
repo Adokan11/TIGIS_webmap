@@ -11,19 +11,7 @@ To run the development version of this website, you need be connected to the Uni
 
 1. Ensure that you have downloaded `flask`, `geopandas`, `dotenv`, `oracledb`, and `pathlib` and all their dependencies.
 2. To connect the SQL data tables, create a .env file in the following format
-> ORACLE_USER=s1234567
-> ORACLE_PASSWORD=***
+ORACLE_USER=s1234567
+ORACLE_PASSWORD=***
 Then include the resulting path in ``dotenv.load_dotenv()`` in [app.py](app.py).
 3. Run [app.py](app.py) and then open http://127.0.0.1:5005
-
-
-for the webmap run app.py then open http://127.0.0.1:5005
-
-you will need `flask`, `geopandas`, `dotenv`, `oracledb`, and `pathlib` and all their dependencies
-
-it now uses sql, you will need to be on the university vpn (or run this on a uni computer). You also need your sql login shown as follows.
-
-create a .env file like this:
-
-    ORACLE_USER=s1234567
-    ORACLE_PASSWORD=***
