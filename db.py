@@ -6,14 +6,17 @@ from shapely.geometry import Point
 import datetime
 
 def get_connection():
-
+    
     if not os.getenv("ORACLE_USER"):
         raise RuntimeError("ORACLE_USER not set in .env")
     if not os.getenv("ORACLE_PASSWORD"):
         raise RuntimeError("ORACLE_PASSWORD not set in .env")
-    
+
+    # get users
     ORACLE_USER = os.getenv("ORACLE_USER")
     ORACLE_PASSWORD = os.getenv("ORACLE_PASSWORD")
+
+    # this is so it can be run outside of the remote desktop connection
     ORACLE_HOST = 'ora-geoslrn-kb1live.is.ed.ac.uk'
     ORACLE_PORT = '1842'
     ORACLE_SERVICE = 'GLRNLIVE_PRMY.is.ed.ac.uk'
@@ -67,6 +70,7 @@ def _sql_querry(cursor, table, idname, c_id):
     return details
 
 def get_site_details(des_ref):
+    '''Gets all the details for a site and combines them into a dictionary'''
     
     conn = get_connection()
     cursor = conn.cursor()
