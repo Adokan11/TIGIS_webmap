@@ -6,7 +6,7 @@ import dotenv
 import json
 import db
 
-dotenv.load_dotenv()  # only in development
+dotenv.load_dotenv() 
 
 app = flask.Flask(__name__)
 
@@ -55,6 +55,7 @@ with open(DATA_DIR / 'plasma.dat', 'r') as f:
 def get_plasma():
     return json.dumps(plasma_data)
 
+# provide layers
 @app.route('/layer/<layer_name>')
 def get_layer(layer_name):
     
@@ -66,24 +67,26 @@ def get_layer(layer_name):
     # Return GeoDataFrame as GeoJSON
     return flask.Response(layer_gdf.to_json(), mimetype = 'application/geo+json')
 
+# details for each site
 @app.route('/site_details/<des_ref>')
 def get_site_details(des_ref):
     details = db.get_site_details(des_ref)
     return details
 
+# index page
 @app.route('/')
 def home():
     # new landing page
     return flask.render_template('index.html')
 
-
+# the map
 @app.route('/map')
 def map_view():
     # your existing webmap view
     layer_order = ['sites', 'buffers', 'spaces', 'ccs']
     return flask.render_template('map.html', layers=layer_order, space_types=good_space_types)
 
-
+# explanation page
 @app.route("/overview")
 def info_overview():
     return flask.render_template("overview.html")
