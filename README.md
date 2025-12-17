@@ -13,5 +13,5 @@ To run the development version of this website, you need be connected to the Uni
 2. To connect the SQL data tables, create a .env file in the following format
     * ORACLE_USER=s1234567
     * ORACLE_PASSWORD=***
-Then include the resulting path in ``dotenv.load_dotenv()`` in [app.py](app.py).
+  * Then include the resulting path in ``dotenv.load_dotenv()`` in [app.py](app.py).
 3. Run [app.py](app.py) and then open http://127.0.0.1:5005
