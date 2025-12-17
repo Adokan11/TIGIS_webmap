@@ -6,13 +6,13 @@ The web map was built using an open-source technical stack, leveraging Python fo
 
 ---------
 
-# Note
+# # # Note
 To run the development version of this website, you need be connected to the University of Edinburgh remote desktop, and have been granted access to the relevant SQL data tables. Assuming this is true, complete the following steps to run the development version of the webapp:
 
 1. Ensure that you have downloaded `flask`, `geopandas`, `dotenv`, `oracledb`, and `pathlib` and all their dependencies.
 2. To connect the SQL data tables, create a .env file in the following format
-    ORACLE_USER=s1234567
-    ORACLE_PASSWORD=***
+> ORACLE_USER=s1234567
+> ORACLE_PASSWORD=***
 Then include the resulting path in ``dotenv.load_dotenv()`` in [app.py](app.py).
 3. Run [app.py](app.py) and then open http://127.0.0.1:5005
 
