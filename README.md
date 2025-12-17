@@ -4,6 +4,9 @@ This is the code base for the University of Edinburgh 2025 Capitol Greenspace Gr
 
 The web map was built using an open-source technical stack, leveraging Python for backend data handling and JavaScript for the interactive frontend interface.
 
+If up you can browse it here:
+https://www.geos.ed.ac.uk/dev/cgsgroup5
+
 ---------
 
 ### Note
